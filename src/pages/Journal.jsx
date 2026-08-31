@@ -8,6 +8,7 @@ import WeightChart from '../components/WeightChart'
 import KnowledgeBase from '../components/KnowledgeBase'
 import AuditTrail from '../components/AuditTrail'
 import ExportData from '../components/ExportData'
+import RulesEditor from '../components/RulesEditor'
 
 export default function Journal() {
   const [user, setUser] = useState(null)
@@ -149,6 +150,10 @@ export default function Journal() {
         {activeTab === 'verlauf' && <AuditTrail />}
         {activeTab === 'einstellungen' && (
           <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-teal mb-3">Fälligkeitsregeln</h2>
+              <RulesEditor />
+            </div>
             <div>
               <h2 className="text-sm font-semibold text-teal mb-3">Daten-Export</h2>
               <ExportData />
