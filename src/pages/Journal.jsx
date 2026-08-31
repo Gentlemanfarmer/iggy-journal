@@ -9,6 +9,7 @@ import KnowledgeBase from '../components/KnowledgeBase'
 import AuditTrail from '../components/AuditTrail'
 import ExportData from '../components/ExportData'
 import RulesEditor from '../components/RulesEditor'
+import FeedingPlan from '../components/FeedingPlan'
 import Footer from '../components/Footer'
 
 export default function Journal() {
@@ -112,6 +113,16 @@ export default function Journal() {
           Wissen
         </button>
         <button
+          onClick={() => setActiveTab('futter')}
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'futter'
+              ? 'border-b-2 border-teal text-teal'
+              : 'text-teal/50 hover:text-teal'
+          }`}
+        >
+          Futter
+        </button>
+        <button
           onClick={() => setActiveTab('verlauf')}
           className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'verlauf'
@@ -148,6 +159,7 @@ export default function Journal() {
           </div>
         )}
         {activeTab === 'wissen' && <KnowledgeBase />}
+        {activeTab === 'futter' && <FeedingPlan />}
         {activeTab === 'verlauf' && <AuditTrail />}
         {activeTab === 'einstellungen' && (
           <div className="space-y-6">
