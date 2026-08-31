@@ -9,11 +9,12 @@ import KnowledgeBase from '../components/KnowledgeBase'
 import AuditTrail from '../components/AuditTrail'
 import ExportData from '../components/ExportData'
 import RulesEditor from '../components/RulesEditor'
+import Footer from '../components/Footer'
 
 export default function Journal() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('journal')
+  const [activeTab, setActiveTab] = useState('neu')
   const [refreshKey, setRefreshKey] = useState(0)
   const navigate = useNavigate()
 
@@ -71,16 +72,6 @@ export default function Journal() {
       {/* Tabs */}
       <div className="mb-6 flex gap-2 border-b border-teal/20 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('journal')}
-          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
-            activeTab === 'journal'
-              ? 'border-b-2 border-teal text-teal'
-              : 'text-teal/50 hover:text-teal'
-          }`}
-        >
-          Journal
-        </button>
-        <button
           onClick={() => setActiveTab('neu')}
           className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'neu'
@@ -99,6 +90,16 @@ export default function Journal() {
           }`}
         >
           Fällig
+        </button>
+        <button
+          onClick={() => setActiveTab('journal')}
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'journal'
+              ? 'border-b-2 border-teal text-teal'
+              : 'text-teal/50 hover:text-teal'
+          }`}
+        >
+          Journal
         </button>
         <button
           onClick={() => setActiveTab('wissen')}
@@ -161,6 +162,8 @@ export default function Journal() {
           </div>
         )}
       </div>
+
+      <Footer />
     </div>
   )
 }
