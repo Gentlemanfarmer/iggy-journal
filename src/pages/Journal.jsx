@@ -6,6 +6,8 @@ import QuickAdd from '../components/QuickAdd'
 import DueOverview from '../components/DueOverview'
 import WeightChart from '../components/WeightChart'
 import KnowledgeBase from '../components/KnowledgeBase'
+import AuditTrail from '../components/AuditTrail'
+import ExportData from '../components/ExportData'
 
 export default function Journal() {
   const [user, setUser] = useState(null)
@@ -66,10 +68,10 @@ export default function Journal() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-2 border-b border-teal/20">
+      <div className="mb-6 flex gap-2 border-b border-teal/20 overflow-x-auto">
         <button
           onClick={() => setActiveTab('journal')}
-          className={`pb-2 px-1 text-sm font-medium transition ${
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'journal'
               ? 'border-b-2 border-teal text-teal'
               : 'text-teal/50 hover:text-teal'
@@ -79,7 +81,7 @@ export default function Journal() {
         </button>
         <button
           onClick={() => setActiveTab('neu')}
-          className={`pb-2 px-1 text-sm font-medium transition ${
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'neu'
               ? 'border-b-2 border-teal text-teal'
               : 'text-teal/50 hover:text-teal'
@@ -89,7 +91,7 @@ export default function Journal() {
         </button>
         <button
           onClick={() => setActiveTab('fällig')}
-          className={`pb-2 px-1 text-sm font-medium transition ${
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'fällig'
               ? 'border-b-2 border-teal text-teal'
               : 'text-teal/50 hover:text-teal'
@@ -99,13 +101,33 @@ export default function Journal() {
         </button>
         <button
           onClick={() => setActiveTab('wissen')}
-          className={`pb-2 px-1 text-sm font-medium transition ${
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
             activeTab === 'wissen'
               ? 'border-b-2 border-teal text-teal'
               : 'text-teal/50 hover:text-teal'
           }`}
         >
           Wissen
+        </button>
+        <button
+          onClick={() => setActiveTab('verlauf')}
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'verlauf'
+              ? 'border-b-2 border-teal text-teal'
+              : 'text-teal/50 hover:text-teal'
+          }`}
+        >
+          Verlauf
+        </button>
+        <button
+          onClick={() => setActiveTab('einstellungen')}
+          className={`pb-2 px-1 text-sm font-medium transition whitespace-nowrap ${
+            activeTab === 'einstellungen'
+              ? 'border-b-2 border-teal text-teal'
+              : 'text-teal/50 hover:text-teal'
+          }`}
+        >
+          ⚙️
         </button>
       </div>
 
@@ -124,6 +146,15 @@ export default function Journal() {
           </div>
         )}
         {activeTab === 'wissen' && <KnowledgeBase />}
+        {activeTab === 'verlauf' && <AuditTrail />}
+        {activeTab === 'einstellungen' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-teal mb-3">Daten-Export</h2>
+              <ExportData />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
