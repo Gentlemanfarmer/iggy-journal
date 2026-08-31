@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #F1EDE2;
+  --color-teal: #1F5A57;
+  --color-chestnut: #98552F;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-paper);
+}
