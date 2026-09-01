@@ -7,10 +7,13 @@ import { categoryColors } from '../lib/categories'
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
+  const [libraryProducts, setLibraryProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
-  const [newComponent, setNewComponent] = useState({ name: '', quantity_g: '', quantity_available_g: '' })
+  const [selectedProductId, setSelectedProductId] = useState('')
+  const [manualName, setManualName] = useState('')
+  const [newComponent, setNewComponent] = useState({ quantity_g: '', quantity_available_g: '' })
   const [lastWeight, setLastWeight] = useState(null)
   const [futterEntries, setFutterEntries] = useState([])
   const [mealsPerDay, setMealsPerDay] = useState(() => {
@@ -28,32 +31,38 @@ export default function FeedingPlan() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      const { data: compData, error: compErr } = await supabase
-        .from('feeding_components')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at')
-      if (compErr) throw compErr
-      setComponents(compData || [])
+      const [compRes, weightRes, futterRes, libRes] = await Promise.all([
+        supabase
+          .from('feeding_components')
+          .select('*, food_products(photo_front_url, photo_back_url)')
+          .eq('user_id', session.user.id)
+          .order('created_at'),
+        supabase
+          .from('entries')
+          .select('date, value')
+          .eq('user_id', session.user.id)
+          .eq('category', 'Gewicht')
+          .eq('subtype', 'Gewogen')
+          .order('date', { ascending: false })
+          .limit(1),
+        supabase
+          .from('entries')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('category', 'Futter')
+          .order('date', { ascending: false })
+          .limit(20),
+        supabase
+          .from('food_products')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('name'),
+      ])
 
-      const { data: weightData } = await supabase
-        .from('entries')
-        .select('date, value')
-        .eq('user_id', session.user.id)
-        .eq('category', 'Gewicht')
-        .eq('subtype', 'Gewogen')
-        .order('date', { ascending: false })
-        .limit(1)
-      if (weightData?.length > 0) setLastWeight(weightData[0])
-
-      const { data: futterData } = await supabase
-        .from('entries')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .eq('category', 'Futter')
-        .order('date', { ascending: false })
-        .limit(20)
-      setFutterEntries(futterData || [])
+      setComponents(compRes.data || [])
+      if (weightRes.data?.length > 0) setLastWeight(weightRes.data[0])
+      setFutterEntries(futterRes.data || [])
+      setLibraryProducts(libRes.data || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -62,7 +71,10 @@ export default function FeedingPlan() {
   }
 
   const handleAddComponent = async () => {
-    if (!newComponent.name || !newComponent.quantity_g || newComponent.quantity_available_g === '') return
+    const name = selectedProductId
+      ? libraryProducts.find((p) => p.id === parseInt(selectedProductId))?.name
+      : manualName
+    if (!name || !newComponent.quantity_g || newComponent.quantity_available_g === '') return
 
     await execute(
       async () => {
@@ -73,13 +85,16 @@ export default function FeedingPlan() {
           .from('feeding_components')
           .insert({
             user_id: session.user.id,
-            name: newComponent.name,
+            name,
+            product_id: selectedProductId ? parseInt(selectedProductId) : null,
             quantity_g: parseInt(newComponent.quantity_g),
             quantity_available_g: parseInt(newComponent.quantity_available_g),
           })
         if (error) throw error
 
-        setNewComponent({ name: '', quantity_g: '', quantity_available_g: '' })
+        setNewComponent({ quantity_g: '', quantity_available_g: '' })
+        setSelectedProductId('')
+        setManualName('')
         await fetchData()
       },
       { successMsg: 'Komponente hinzugefügt' },
@@ -173,17 +188,47 @@ export default function FeedingPlan() {
         )}
       </div>
 
-      {/* Add New Component */}
+      {/* Add Component from Library */}
       <div className="space-y-3 rounded border border-teal/20 bg-white p-4">
         <h3 className="text-sm font-semibold text-teal">Komponente hinzufügen</h3>
 
-        <input
-          type="text"
-          placeholder="Name (z.B. ActivDog Wildschwein)"
-          value={newComponent.name}
-          onChange={(e) => setNewComponent({ ...newComponent, name: e.target.value })}
-          className="w-full rounded border border-teal text-sm px-2 py-1 text-teal"
-        />
+        {libraryProducts.length > 0 ? (
+          <>
+            <select
+              value={selectedProductId}
+              onChange={(e) => {
+                setSelectedProductId(e.target.value)
+                if (e.target.value !== 'manual') setManualName('')
+              }}
+              className="w-full rounded border border-teal text-sm px-2 py-1.5 text-teal bg-white"
+            >
+              <option value="">Aus Bibliothek wählen...</option>
+              {libraryProducts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}{p.brand ? ` (${p.brand})` : ''}
+                </option>
+              ))}
+              <option value="manual">— Manuell eingeben —</option>
+            </select>
+            {selectedProductId === 'manual' && (
+              <input
+                type="text"
+                placeholder="Name (z.B. Hühnerhälse)"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                className="w-full rounded border border-teal text-sm px-2 py-1 text-teal"
+              />
+            )}
+          </>
+        ) : (
+          <input
+            type="text"
+            placeholder="Name (z.B. ActivDog Wildschwein)"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            className="w-full rounded border border-teal text-sm px-2 py-1 text-teal"
+          />
+        )}
 
         <div className="flex gap-2">
           <input
@@ -268,8 +313,16 @@ export default function FeedingPlan() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
+                  <div className="flex items-start gap-3">
+                    {/* Product thumbnail */}
+                    {component.food_products?.photo_front_url && (
+                      <img
+                        src={component.food_products.photo_front_url}
+                        alt=""
+                        className="h-12 w-12 rounded border border-teal/20 object-cover flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-teal">{component.name}</p>
                       <p className="text-xs text-teal/60">
                         <strong>{component.quantity_g}g</strong> pro Mahlzeit
@@ -281,7 +334,7 @@ export default function FeedingPlan() {
                         <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
                       )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       <button
                         onClick={() => handleEdit(component)}
                         className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"

@@ -10,10 +10,12 @@ import AuditTrail from '../components/AuditTrail'
 import ExportData from '../components/ExportData'
 import RulesEditor from '../components/RulesEditor'
 import FeedingPlan from '../components/FeedingPlan'
+import FoodLibrary from '../components/FoodLibrary'
 import Footer from '../components/Footer'
 
 const MORE_ITEMS = [
   { key: 'wissen', label: 'Wissen' },
+  { key: 'bibliothek', label: 'Bibliothek' },
   { key: 'futter', label: 'Futter' },
   { key: 'verlauf', label: 'Verlauf' },
   { key: 'einstellungen', label: 'Einstellungen' },
@@ -100,6 +102,7 @@ export default function Journal() {
           </div>
         )}
         {activeTab === 'wissen' && <KnowledgeBase />}
+        {activeTab === 'bibliothek' && <FoodLibrary />}
         {activeTab === 'futter' && <FeedingPlan />}
         {activeTab === 'verlauf' && <AuditTrail />}
         {activeTab === 'einstellungen' && (
