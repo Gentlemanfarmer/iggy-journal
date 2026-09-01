@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { calculateDailyTotal } from '../utils/memoize'
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
@@ -113,9 +114,7 @@ export default function FeedingPlan() {
     )
   }
 
-  const calculateDailyConsumption = () => {
-    return components.reduce((sum, c) => sum + c.quantity_g, 0)
-  }
+  const dailyTotal = useMemo(() => calculateDailyTotal(components), [components])
 
   if (loading) {
     return <p className="text-sm text-teal/60">Lädt Fütterungsplan...</p>
@@ -127,8 +126,8 @@ export default function FeedingPlan() {
       {/* Daily Summary */}
       <div className="rounded border border-teal/20 bg-teal/5 p-4">
         <p className="text-xs text-teal/60">Pro Mahlzeit (3x täglich)</p>
-        <p className="text-2xl font-bold text-teal">{calculateDailyConsumption()}g</p>
-        <p className="text-xs text-teal/60">Täglich: ~{calculateDailyConsumption() * 3}g</p>
+        <p className="text-2xl font-bold text-teal">{dailyTotal}g</p>
+        <p className="text-xs text-teal/60">Täglich: ~{dailyTotal * 3}g</p>
       </div>
 
       {/* Add New Component */}

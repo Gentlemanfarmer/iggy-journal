@@ -60,12 +60,12 @@ export default function QuickAdd({ onEntryAdded }) {
       {step === 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-teal">Kategorie wählen:</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {Object.keys(categories).map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleSelectCategory(cat)}
-                className="rounded border-2 border-teal py-2 text-teal hover:bg-teal hover:text-paper transition"
+                className="rounded border-2 border-teal py-2 text-sm sm:text-base font-medium text-teal hover:bg-teal hover:text-paper transition"
               >
                 {cat}
               </button>
@@ -83,12 +83,12 @@ export default function QuickAdd({ onEntryAdded }) {
             ← Zurück
           </button>
           <p className="text-sm font-medium text-teal">{selectedCategory}:</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {categories[selectedCategory].map((subtype) => (
               <button
                 key={subtype}
                 onClick={() => handleSelectSubtype(subtype)}
-                className="rounded bg-teal/10 py-2 text-teal hover:bg-teal hover:text-paper transition text-sm"
+                className="rounded bg-teal/10 py-2 px-2 font-medium text-sm sm:text-base text-teal hover:bg-teal hover:text-paper transition"
               >
                 {subtype}
               </button>

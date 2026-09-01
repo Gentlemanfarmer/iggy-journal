@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncOperation } from './useAsyncOperation'
+import { useQueryCache } from './useQueryCache'
 
 export function useFetchEntries() {
   const [entries, setEntries] = useState([])
   const [hasMore, setHasMore] = useState(false)
   const [page, setPage] = useState(1)
   const { loading, error, execute } = useAsyncOperation()
+  const { cachedFetch, invalidateCache } = useQueryCache()
   const pageSize = 50
 
   const fetchEntries = async (pageNum = 1) => {
@@ -68,6 +70,8 @@ export function useFetchEntries() {
         await fetchEntries(1)
         throw err
       }
+      // Invalidate cache after successful delete
+      invalidateCache('entries')
     })
   }
 

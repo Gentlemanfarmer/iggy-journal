@@ -1,23 +1,23 @@
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { categories, categoryColors, getCategoryLabel } from '../lib/categories'
 import { useFetchEntries } from '../hooks/useFetchEntries'
 import { useToast } from '../context/ToastContext'
+import { groupEntriesByDate } from '../utils/memoize'
 
-export default function JournalView() {
+function JournalViewComponent() {
   const [selectedCategory, setSelectedCategory] = useState(null)
   const { entries, loading, error, hasMore, loadMore, deleteEntry } = useFetchEntries()
   const { addToast } = useToast()
 
-  const filteredEntries = selectedCategory
-    ? entries.filter((e) => e.category === selectedCategory)
-    : entries
+  const filteredEntries = useMemo(
+    () => (selectedCategory ? entries.filter((e) => e.category === selectedCategory) : entries),
+    [entries, selectedCategory],
+  )
 
-  const groupedEntries = filteredEntries.reduce((acc, entry) => {
-    const dateStr = entry.date
-    if (!acc[dateStr]) acc[dateStr] = []
-    acc[dateStr].push(entry)
-    return acc
-  }, {})
+  const groupedEntries = useMemo(
+    () => groupEntriesByDate(filteredEntries),
+    [filteredEntries],
+  )
 
   const sortedDates = Object.keys(groupedEntries).sort().reverse()
 
@@ -114,3 +114,5 @@ export default function JournalView() {
     </div>
   )
 }
+
+export default memo(JournalViewComponent)
