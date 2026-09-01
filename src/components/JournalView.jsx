@@ -1,32 +1,33 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories, categoryColors, getCategoryLabel } from '../lib/categories'
+import { useAsyncOperation } from '../hooks/useAsyncOperation'
 
 export default function JournalView() {
   const [entries, setEntries] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { loading, error, execute, clearError } = useAsyncOperation()
+  const [deleting, setDeleting] = useState(null)
 
   useEffect(() => {
     fetchEntries()
   }, [])
 
   const fetchEntries = async () => {
-    setLoading(true)
-    try {
+    await execute(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not authenticated')
+
       const { data, error } = await supabase
         .from('entries')
         .select('*')
+        .eq('user_id', session.user.id)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
 
       if (error) throw error
       setEntries(data || [])
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   const filteredEntries = selectedCategory
@@ -43,14 +44,35 @@ export default function JournalView() {
   const sortedDates = Object.keys(groupedEntries).sort().reverse()
 
   const handleDelete = async (id) => {
-    if (confirm('Eintrag löschen?')) {
-      await supabase.from('entries').delete().eq('id', id)
-      fetchEntries()
+    if (!confirm('Eintrag löschen?')) return
+
+    setDeleting(id)
+    try {
+      const { error } = await supabase.from('entries').delete().eq('id', id)
+      if (error) throw error
+      await fetchEntries()
+    } catch (err) {
+      console.error('Delete failed:', err)
+    } finally {
+      setDeleting(null)
     }
   }
 
   return (
     <div className="space-y-4">
+      {/* Error Message */}
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-800">❌ {error}</p>
+          <button
+            onClick={clearError}
+            className="text-xs text-red-600 hover:text-red-800 mt-1"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
+
       {/* Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         <button
@@ -107,9 +129,10 @@ export default function JournalView() {
                     </div>
                     <button
                       onClick={() => handleDelete(entry.id)}
-                      className="text-xs text-red-600 hover:text-red-800"
+                      disabled={deleting === entry.id}
+                      className="text-xs text-red-600 hover:text-red-800 disabled:opacity-50"
                     >
-                      ✕
+                      {deleting === entry.id ? '...' : '✕'}
                     </button>
                   </div>
                 ))}

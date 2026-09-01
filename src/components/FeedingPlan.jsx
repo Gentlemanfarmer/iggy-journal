@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAsyncOperation } from '../hooks/useAsyncOperation'
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { loading, error, execute, clearError } = useAsyncOperation()
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
-  const [message, setMessage] = useState('')
   const [newComponent, setNewComponent] = useState({ name: '', quantity_g: '', quantity_available_g: '' })
+  const [successMsg, setSuccessMsg] = useState('')
 
   useEffect(() => {
     fetchComponents()
   }, [])
 
   const fetchComponents = async () => {
-    setLoading(true)
-    try {
+    await execute(async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
+      if (!session?.user) throw new Error('Not authenticated')
 
       const { data, error } = await supabase
         .from('feeding_components')
@@ -27,22 +27,19 @@ export default function FeedingPlan() {
 
       if (error) throw error
       setComponents(data || [])
-    } catch (err) {
-      setMessage(`Fehler: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
+    })
   }
 
   const handleAddComponent = async () => {
     if (!newComponent.name || !newComponent.quantity_g || newComponent.quantity_available_g === '') {
-      setMessage('❌ Bitte füllen Sie alle Felder aus')
+      clearError()
+      // This will show validation error in UI
       return
     }
 
-    try {
+    await execute(async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
+      if (!session?.user) throw new Error('Not authenticated')
 
       const { error } = await supabase
         .from('feeding_components')
@@ -55,13 +52,11 @@ export default function FeedingPlan() {
 
       if (error) throw error
 
-      setMessage('✅ Komponente hinzugefügt')
+      setSuccessMsg('✅ Komponente hinzugefügt')
       setNewComponent({ name: '', quantity_g: '', quantity_available_g: '' })
       await fetchComponents()
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      setMessage(`❌ Fehler: ${err.message}`)
-    }
+      setTimeout(() => setSuccessMsg(''), 3000)
+    })
   }
 
   const handleEdit = (component) => {
@@ -75,7 +70,7 @@ export default function FeedingPlan() {
   }
 
   const handleSave = async (componentId) => {
-    try {
+    await execute(async () => {
       const { error } = await supabase
         .from('feeding_components')
         .update({
@@ -88,19 +83,17 @@ export default function FeedingPlan() {
 
       if (error) throw error
 
-      setMessage('✅ Komponente aktualisiert')
+      setSuccessMsg('✅ Komponente aktualisiert')
       setEditing(null)
       await fetchComponents()
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      setMessage(`❌ Fehler: ${err.message}`)
-    }
+      setTimeout(() => setSuccessMsg(''), 3000)
+    })
   }
 
   const handleDelete = async (componentId) => {
     if (!confirm('Komponente wirklich löschen?')) return
 
-    try {
+    await execute(async () => {
       const { error } = await supabase
         .from('feeding_components')
         .delete()
@@ -108,12 +101,10 @@ export default function FeedingPlan() {
 
       if (error) throw error
 
-      setMessage('✅ Komponente gelöscht')
+      setSuccessMsg('✅ Komponente gelöscht')
       await fetchComponents()
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      setMessage(`❌ Fehler: ${err.message}`)
-    }
+      setTimeout(() => setSuccessMsg(''), 3000)
+    })
   }
 
   const calculateDailyConsumption = () => {
@@ -126,6 +117,26 @@ export default function FeedingPlan() {
 
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-800">❌ {error}</p>
+          <button
+            onClick={clearError}
+            className="text-xs text-red-600 hover:text-red-800 mt-1"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMsg && (
+        <div className="rounded border border-green-200 bg-green-50 p-3">
+          <p className="text-sm text-green-800">{successMsg}</p>
+        </div>
+      )}
+
       {/* Daily Summary */}
       <div className="rounded border border-teal/20 bg-teal/5 p-4">
         <p className="text-xs text-teal/60">Pro Mahlzeit (3x täglich)</p>
@@ -268,11 +279,6 @@ export default function FeedingPlan() {
         )}
       </div>
 
-      {message && (
-        <p className={`text-xs ${message.includes('✅') ? 'text-teal' : 'text-red-600'}`}>
-          {message}
-        </p>
-      )}
     </div>
   )
 }

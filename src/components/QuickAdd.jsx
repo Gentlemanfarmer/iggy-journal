@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories } from '../lib/categories'
+import { useAsyncOperation } from '../hooks/useAsyncOperation'
 
 export default function QuickAdd({ onEntryAdded }) {
   const [step, setStep] = useState(0) // 0: category, 1: subtype, 2: details
@@ -9,7 +10,7 @@ export default function QuickAdd({ onEntryAdded }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
-  const [saving, setSaving] = useState(false)
+  const { loading: saving, error, execute, clearError } = useAsyncOperation()
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat)
@@ -24,8 +25,7 @@ export default function QuickAdd({ onEntryAdded }) {
   const handleSave = async () => {
     if (!selectedCategory || !selectedSubtype) return
 
-    setSaving(true)
-    try {
+    await execute(async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) throw new Error('Not authenticated')
 
@@ -50,16 +50,24 @@ export default function QuickAdd({ onEntryAdded }) {
       setValue('')
 
       onEntryAdded()
-    } catch (err) {
-      console.error(err)
-      alert('Fehler beim Speichern')
-    } finally {
-      setSaving(false)
-    }
+    })
   }
 
   return (
     <div className="space-y-4">
+      {/* Error Message */}
+      {error && (
+        <div className="rounded border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-800">❌ {error}</p>
+          <button
+            onClick={clearError}
+            className="text-xs text-red-600 hover:text-red-800 mt-1"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
+
       {step === 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-teal">Kategorie wählen:</p>
