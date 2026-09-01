@@ -66,7 +66,7 @@ returns trigger as $$
 begin
   insert into public.audit_logs (user_id, table_name, operation, record_id, old_values, new_values)
   values (
-    auth.uid(),
+    coalesce(auth.uid(), new.user_id),
     'entries',
     'UPDATE',
     new.id,
@@ -97,7 +97,7 @@ begin
   -- Log the deletion
   insert into public.audit_logs (user_id, table_name, operation, record_id, old_values)
   values (
-    auth.uid(),
+    coalesce(auth.uid(), old.user_id),
     'entries',
     'DELETE',
     old.id,
