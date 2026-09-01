@@ -1,5 +1,6 @@
 import { useState, useMemo, memo } from 'react'
 import { categories, categoryColors, getCategoryLabel } from '../lib/categories'
+import { formatDateSmart } from '../lib/dates'
 import { useFetchEntries } from '../hooks/useFetchEntries'
 import { useToast } from '../context/ToastContext'
 import { groupEntriesByDate } from '../utils/memoize'
@@ -30,6 +31,8 @@ function JournalViewComponent() {
       addToast(`Fehler beim Löschen: ${err.message}`, 'error')
     }
   }
+
+  const isPdf = (url) => url?.toLowerCase().endsWith('.pdf')
 
   return (
     <div className="space-y-4">
@@ -70,7 +73,9 @@ function JournalViewComponent() {
         <div className="space-y-6">
           {sortedDates.map((date) => (
             <div key={date}>
-              <h3 className="mb-2 text-sm font-semibold text-chestnut">{date}</h3>
+              <h3 className="mb-2 text-sm font-semibold text-chestnut">
+                {formatDateSmart(date)}
+              </h3>
               <div className="space-y-2">
                 {groupedEntries[date].map((entry) => (
                   <div
@@ -86,6 +91,26 @@ function JournalViewComponent() {
                         <p className="text-xs text-chestnut">
                           {entry.value} {entry.category === 'Gewicht' ? 'kg' : ''}
                         </p>
+                      )}
+                      {entry.photo_url && (
+                        <a
+                          href={entry.photo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-block"
+                        >
+                          {isPdf(entry.photo_url) ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-1 text-xs text-red-700">
+                              PDF ansehen
+                            </span>
+                          ) : (
+                            <img
+                              src={entry.photo_url}
+                              alt=""
+                              className="h-12 w-12 rounded object-cover border border-teal/20"
+                            />
+                          )}
+                        </a>
                       )}
                     </div>
                     <button

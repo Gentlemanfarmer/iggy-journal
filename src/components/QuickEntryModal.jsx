@@ -7,9 +7,10 @@ import { getDependencies, buildDependentEntries } from '../lib/dependencies'
 export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
+  const [file, setFile] = useState(null)
   const [dependencies, setDependencies] = useState([])
   const [selectedDeps, setSelectedDeps] = useState({})
-  const { execute, isLoading } = useAsyncWithToast()
+  const { execute, loading } = useAsyncWithToast()
   const { triggerRefresh } = useRefresh()
 
   useEffect(() => {
@@ -25,13 +26,22 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
     const deps = await getDependencies(session.user.id, rule.id)
     if (deps.length > 0) {
       setDependencies(deps)
-      // Initialize all as checked
       const initial = {}
       deps.forEach((dep) => {
         initial[dep.dependent_rule_id] = true
       })
       setSelectedDeps(initial)
     }
+  }
+
+  const uploadFile = async (userId) => {
+    if (!file) return null
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('photos').upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    return data.publicUrl
   }
 
   const handleSubmit = async () => {
@@ -41,8 +51,8 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
         if (!session?.user) throw new Error('Not authenticated')
 
         const today = new Date().toISOString().split('T')[0]
+        const photoUrl = await uploadFile(session.user.id)
 
-        // Create main entry
         const { error: entryError } = await supabase
           .from('entries')
           .insert({
@@ -52,11 +62,11 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
             date: today,
             note: note || null,
             value: value ? parseFloat(value) : null,
+            photo_url: photoUrl,
           })
 
         if (entryError) throw entryError
 
-        // Create entries for selected dependent rules (same date)
         const dependentEntries = buildDependentEntries(
           session.user.id,
           dependencies,
@@ -79,6 +89,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const handleClose = () => {
     setNote('')
     setValue('')
+    setFile(null)
     setDependencies([])
     setSelectedDeps({})
     onClose()
@@ -88,7 +99,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-96 max-h-96 overflow-y-auto rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
+      <div className="w-96 max-h-[80vh] overflow-y-auto rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
         <h2 className="mb-4 text-lg font-semibold text-teal">
           {rule.category} - {rule.subtype}
         </h2>
@@ -122,6 +133,21 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
           </div>
         )}
 
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium text-teal">
+            Foto / PDF (optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="w-full text-sm text-teal file:mr-2 file:rounded file:border-0 file:bg-teal/10 file:px-3 file:py-1 file:text-sm file:text-teal"
+          />
+          {file && (
+            <p className="mt-1 text-xs text-teal/60">{file.name}</p>
+          )}
+        </div>
+
         {dependencies.length > 0 && (
           <div className="mb-4 space-y-2 border-t border-teal/10 pt-3">
             <p className="text-xs font-medium text-teal">Abhängige Aufgaben:</p>
@@ -153,14 +179,14 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
         <div className="flex gap-2">
           <button
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={loading}
             className="flex-1 rounded bg-teal py-2 text-sm font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
           >
-            {isLoading ? 'Speichert...' : 'Erledigt'}
+            {loading ? 'Speichert...' : 'Erledigt'}
           </button>
           <button
             onClick={handleClose}
-            disabled={isLoading}
+            disabled={loading}
             className="flex-1 rounded border border-teal bg-white py-2 text-sm font-medium text-teal hover:bg-teal/5 disabled:opacity-50 transition"
           >
             Abbrechen

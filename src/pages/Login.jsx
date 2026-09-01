@@ -7,45 +7,26 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSignup, setIsSignup] = useState(false)
   const navigate = useNavigate()
 
-  const handleAuth = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      if (isSignup) {
-        const { data, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (authError) {
-          setError(authError.message)
-        } else if (data) {
-          setError('')
-          setEmail('')
-          setPassword('')
-          setIsSignup(false)
-          setError('✅ Konto erstellt! Bitte melden Sie sich an.')
-          setTimeout(() => setError(''), 3000)
-        }
-      } else {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (authError) {
-          setError(authError.message)
-        } else if (data) {
-          navigate('/journal')
-        }
+      if (authError) {
+        setError(authError.message)
+      } else if (data) {
+        navigate('/journal')
       }
     } catch (err) {
-      setError('Fehler bei der Authentifizierung. Bitte versuchen Sie es später erneut.')
+      setError('Fehler bei der Anmeldung. Bitte versuche es später erneut.')
     } finally {
       setLoading(false)
     }
@@ -58,7 +39,7 @@ export default function Login() {
         <p className="mt-2 text-sm text-chestnut">Pflege-Tagebuch für Iggy</p>
       </div>
 
-      <form onSubmit={handleAuth} className="w-full max-w-sm space-y-4">
+      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-teal">
             E-Mail
@@ -89,34 +70,15 @@ export default function Login() {
           />
         </div>
 
-        {error && (
-          <p className={`text-sm ${error.includes('✅') ? 'text-teal' : 'text-chestnut'}`}>
-            {error}
-          </p>
-        )}
+        {error && <p className="text-sm text-chestnut">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded bg-teal py-2 font-medium text-paper transition hover:bg-teal/90 disabled:opacity-50"
         >
-          {loading ? 'Wird verarbeitet...' : isSignup ? 'Konto erstellen' : 'Einloggen'}
+          {loading ? 'Wird angemeldet...' : 'Einloggen'}
         </button>
-
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignup(!isSignup)
-              setError('')
-              setEmail('')
-              setPassword('')
-            }}
-            className="text-sm text-teal/70 hover:text-teal transition"
-          >
-            {isSignup ? 'Haben Sie bereits ein Konto? Einloggen' : 'Kein Konto? Jetzt erstellen'}
-          </button>
-        </div>
       </form>
     </div>
   )

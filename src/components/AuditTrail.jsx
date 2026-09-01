@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { formatDateDE } from '../lib/dates'
 
 export default function AuditTrail() {
   const [logs, setLogs] = useState([])
@@ -121,7 +122,7 @@ export default function AuditTrail() {
 
               {log.operation === 'DELETE' && log.old_values && (
                 <div className="text-xs text-teal/70 mt-2">
-                  <strong>Gelöscht:</strong> {log.old_values.category} - {log.old_values.subtype} ({log.old_values.date})
+                  <strong>Gelöscht:</strong> {log.old_values.category} - {log.old_values.subtype} ({formatDateDE(log.old_values.date)})
                 </div>
               )}
 

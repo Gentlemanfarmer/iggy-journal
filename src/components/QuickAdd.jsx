@@ -11,6 +11,7 @@ export default function QuickAdd({ onEntryAdded }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
+  const [file, setFile] = useState(null)
   const [dependencies, setDependencies] = useState([])
   const [selectedDeps, setSelectedDeps] = useState({})
   const { loading: saving, execute } = useAsyncWithToast()
@@ -22,6 +23,7 @@ export default function QuickAdd({ onEntryAdded }) {
     setDate(new Date().toISOString().split('T')[0])
     setNote('')
     setValue('')
+    setFile(null)
     setDependencies([])
     setSelectedDeps({})
   }
@@ -37,7 +39,6 @@ export default function QuickAdd({ onEntryAdded }) {
     setDependencies([])
     setSelectedDeps({})
 
-    // Load dependent tasks for this rule (if any)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return
 
@@ -55,6 +56,16 @@ export default function QuickAdd({ onEntryAdded }) {
     }
   }
 
+  const uploadFile = async (userId) => {
+    if (!file) return null
+    const ext = file.name.split('.').pop()
+    const path = `${userId}/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('photos').upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    return data.publicUrl
+  }
+
   const handleSave = async () => {
     if (!selectedCategory || !selectedSubtype) return
 
@@ -63,6 +74,8 @@ export default function QuickAdd({ onEntryAdded }) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.user) throw new Error('Not authenticated')
 
+        const photoUrl = await uploadFile(session.user.id)
+
         const entry = {
           user_id: session.user.id,
           date,
@@ -70,12 +83,12 @@ export default function QuickAdd({ onEntryAdded }) {
           subtype: selectedSubtype,
           note: note || null,
           value: value ? parseFloat(value) : null,
+          photo_url: photoUrl,
         }
 
         const { error } = await supabase.from('entries').insert([entry])
         if (error) throw error
 
-        // Create entries for selected dependent tasks (same date)
         const dependentEntries = buildDependentEntries(
           session.user.id,
           dependencies,
@@ -179,6 +192,19 @@ export default function QuickAdd({ onEntryAdded }) {
               placeholder="Besonderheiten, Beobachtungen..."
               rows="3"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-teal">Foto / PDF (optional)</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="mt-1 w-full text-sm text-teal file:mr-2 file:rounded file:border-0 file:bg-teal/10 file:px-3 file:py-1 file:text-sm file:text-teal"
+            />
+            {file && (
+              <p className="mt-1 text-xs text-teal/60">{file.name}</p>
+            )}
           </div>
 
           {dependencies.length > 0 && (

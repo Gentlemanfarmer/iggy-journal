@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categoryColors } from '../lib/categories'
+import { formatDateDE } from '../lib/dates'
 import { useRefresh } from '../context/RefreshContext'
 import QuickEntryModal from './QuickEntryModal'
 
@@ -111,7 +112,7 @@ function DueOverviewComponent() {
                   </div>
                   {lastEntry && (
                     <p className="mt-1 text-xs text-teal/60">
-                      Letztens: {lastEntry.date}
+                      Letztens: {formatDateDE(lastEntry.date)}
                     </p>
                   )}
                 </div>

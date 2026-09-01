@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { calculateDailyTotal } from '../utils/memoize'
+import { formatDateDE } from '../lib/dates'
+import { categoryColors } from '../lib/categories'
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
@@ -9,26 +11,49 @@ export default function FeedingPlan() {
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
   const [newComponent, setNewComponent] = useState({ name: '', quantity_g: '', quantity_available_g: '' })
+  const [lastWeight, setLastWeight] = useState(null)
+  const [futterEntries, setFutterEntries] = useState([])
+  const [mealsPerDay, setMealsPerDay] = useState(() => {
+    try { return parseInt(localStorage.getItem('iggy_meals_per_day') || '3') } catch { return 3 }
+  })
   const { loading: saving, execute } = useAsyncWithToast()
 
   useEffect(() => {
-    fetchComponents()
+    fetchData()
   }, [])
 
-  const fetchComponents = async () => {
+  const fetchData = async () => {
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      const { data, error } = await supabase
+      const { data: compData, error: compErr } = await supabase
         .from('feeding_components')
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at')
+      if (compErr) throw compErr
+      setComponents(compData || [])
 
-      if (error) throw error
-      setComponents(data || [])
+      const { data: weightData } = await supabase
+        .from('entries')
+        .select('date, value')
+        .eq('user_id', session.user.id)
+        .eq('category', 'Gewicht')
+        .eq('subtype', 'Gewogen')
+        .order('date', { ascending: false })
+        .limit(1)
+      if (weightData?.length > 0) setLastWeight(weightData[0])
+
+      const { data: futterData } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('category', 'Futter')
+        .order('date', { ascending: false })
+        .limit(20)
+      setFutterEntries(futterData || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -37,9 +62,7 @@ export default function FeedingPlan() {
   }
 
   const handleAddComponent = async () => {
-    if (!newComponent.name || !newComponent.quantity_g || newComponent.quantity_available_g === '') {
-      return
-    }
+    if (!newComponent.name || !newComponent.quantity_g || newComponent.quantity_available_g === '') return
 
     await execute(
       async () => {
@@ -54,11 +77,10 @@ export default function FeedingPlan() {
             quantity_g: parseInt(newComponent.quantity_g),
             quantity_available_g: parseInt(newComponent.quantity_available_g),
           })
-
         if (error) throw error
 
         setNewComponent({ name: '', quantity_g: '', quantity_available_g: '' })
-        await fetchComponents()
+        await fetchData()
       },
       { successMsg: 'Komponente hinzugefügt' },
     )
@@ -86,11 +108,10 @@ export default function FeedingPlan() {
             updated_at: new Date().toISOString(),
           })
           .eq('id', componentId)
-
         if (error) throw error
 
         setEditing(null)
-        await fetchComponents()
+        await fetchData()
       },
       { successMsg: 'Komponente aktualisiert' },
     )
@@ -105,16 +126,20 @@ export default function FeedingPlan() {
           .from('feeding_components')
           .delete()
           .eq('id', componentId)
-
         if (error) throw error
-
-        await fetchComponents()
+        await fetchData()
       },
       { successMsg: 'Komponente gelöscht' },
     )
   }
 
-  const dailyTotal = useMemo(() => calculateDailyTotal(components), [components])
+  const updateMealsPerDay = (val) => {
+    const n = Math.max(1, Math.min(10, parseInt(val) || 1))
+    setMealsPerDay(n)
+    try { localStorage.setItem('iggy_meals_per_day', String(n)) } catch {}
+  }
+
+  const perMeal = useMemo(() => calculateDailyTotal(components), [components])
 
   if (loading) {
     return <p className="text-sm text-teal/60">Lädt Fütterungsplan...</p>
@@ -123,11 +148,29 @@ export default function FeedingPlan() {
   return (
     <div className="space-y-6">
 
+      {/* ── Aktueller Futterplan ── */}
+      <h2 className="text-sm font-semibold text-teal">Aktueller Futterplan</h2>
+
       {/* Daily Summary */}
-      <div className="rounded border border-teal/20 bg-teal/5 p-4">
-        <p className="text-xs text-teal/60">Pro Mahlzeit (3x täglich)</p>
-        <p className="text-2xl font-bold text-teal">{dailyTotal}g</p>
-        <p className="text-xs text-teal/60">Täglich: ~{dailyTotal * 3}g</p>
+      <div className="rounded border border-teal/20 bg-teal/5 p-4 space-y-1">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-teal/60">Mahlzeiten pro Tag:</p>
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={mealsPerDay}
+            onChange={(e) => updateMealsPerDay(e.target.value)}
+            className="w-14 rounded border border-teal/30 bg-white px-2 py-0.5 text-sm text-teal text-center"
+          />
+        </div>
+        <p className="text-2xl font-bold text-teal">{perMeal}g <span className="text-sm font-normal text-teal/60">pro Mahlzeit</span></p>
+        <p className="text-xs text-teal/60">Täglich: ~{perMeal * mealsPerDay}g</p>
+        {lastWeight && (
+          <p className="text-xs text-chestnut">
+            Letztes Gewicht: {lastWeight.value} kg am {formatDateDE(lastWeight.date)}
+          </p>
+        )}
       </div>
 
       {/* Add New Component */}
@@ -163,7 +206,7 @@ export default function FeedingPlan() {
           onClick={handleAddComponent}
           className="w-full rounded bg-teal py-2 text-xs font-medium text-paper hover:bg-teal/90 transition"
         >
-          ➕ Hinzufügen
+          Hinzufügen
         </button>
       </div>
 
@@ -178,7 +221,6 @@ export default function FeedingPlan() {
             {components.map((component) => (
               <div key={component.id} className="border border-teal/20 rounded p-3 bg-white">
                 {editing === component.id ? (
-                  // Edit mode
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -186,7 +228,6 @@ export default function FeedingPlan() {
                       disabled
                       className="w-full rounded border border-teal/50 bg-gray-100 px-2 py-1 text-xs text-teal"
                     />
-
                     <div className="flex gap-2">
                       <div className="flex-1">
                         <label className="text-xs text-teal/60 block mb-1">pro Mahlzeit (g)</label>
@@ -211,7 +252,6 @@ export default function FeedingPlan() {
                         />
                       </div>
                     </div>
-
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleSave(component.id)}
@@ -228,7 +268,6 @@ export default function FeedingPlan() {
                     </div>
                   </div>
                 ) : (
-                  // View mode
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-teal">{component.name}</p>
@@ -239,10 +278,9 @@ export default function FeedingPlan() {
                         Verfügbar: <strong>{component.quantity_available_g}g</strong>
                       </p>
                       {component.notes && (
-                        <p className="text-xs text-teal/50 mt-1 italic">💬 {component.notes}</p>
+                        <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
                       )}
                     </div>
-
                     <div className="flex gap-1">
                       <button
                         onClick={() => handleEdit(component)}
@@ -265,6 +303,29 @@ export default function FeedingPlan() {
         )}
       </div>
 
+      {/* ── Futter-Ereignisse ── */}
+      <h2 className="text-sm font-semibold text-teal border-t border-teal/10 pt-4">Futter-Ereignisse</h2>
+
+      {futterEntries.length === 0 ? (
+        <p className="text-sm text-teal/60 italic">Noch keine Futter-Einträge vorhanden</p>
+      ) : (
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {futterEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className="flex items-start gap-3 rounded border border-teal/20 bg-white p-3"
+            >
+              <div className={`mt-0.5 rounded px-2 py-0.5 text-xs font-medium ${categoryColors.Futter}`}>
+                {entry.subtype}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-teal/60">{formatDateDE(entry.date)}</p>
+                {entry.note && <p className="text-sm text-teal">{entry.note}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

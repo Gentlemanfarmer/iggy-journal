@@ -3,7 +3,7 @@ export const categories = {
     'Schur komplett',
     'Baden',
     'Abspülen',
-    'Bürsten',
+    'Gebürstet',
     'Krallen geschnitten',
     'Hygieneschur',
     'Augen freigeschnitten',
@@ -12,10 +12,10 @@ export const categories = {
     'Ohren kontrolliert',
     'Ohren gezupft',
   ],
-  Futter: ['Fütterung', 'Futterwechsel', 'Leckerli'],
-  Gewicht: ['Wiegen'],
-  Training: ['Session', 'Kommando gelernt', 'Ruheübung', 'Leinentraining', 'Nasenarbeit', 'Sozialisierung', 'Meilenstein'],
-  Medizin: ['Tierarzt', 'Impfung', 'Entwurmt', 'Zeckenschutz gegeben', 'Medikament', 'Symptom'],
+  Futter: ['Futter umgestellt', 'Spezialfutter / Schonkost', 'Nicht gefressen', 'Unverträglichkeit'],
+  Gewicht: ['Gewogen'],
+  Training: ['Trainiert', 'Neues Kommando', 'Ruheübung', 'Leine geübt', 'Nasenarbeit', 'Sozialisierung', 'Meilenstein', 'Rückruf geübt'],
+  Medizin: ['Tierarztbesuch', 'Geimpft', 'Entwurmt', 'Zeckenschutz gegeben', 'Medikament gegeben', 'Symptom beobachtet'],
 }
 
 export const categoryColors = {

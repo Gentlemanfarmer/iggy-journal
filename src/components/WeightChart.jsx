@@ -17,7 +17,7 @@ export default function WeightChart() {
         .from('entries')
         .select('date, value')
         .eq('category', 'Gewicht')
-        .eq('subtype', 'Wiegen')
+        .eq('subtype', 'Gewogen')
         .order('date', { ascending: true })
 
       if (error) throw error
