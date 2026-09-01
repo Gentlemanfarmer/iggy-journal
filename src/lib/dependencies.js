@@ -35,6 +35,47 @@ export async function getDependencies(userId, mainRuleId) {
 }
 
 /**
+ * Fetch all dependency links for a user.
+ * Returns an array of { main_rule_id, dependent_rule_id } (empty if none / table missing).
+ */
+export async function getAllDependencies(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('rule_dependencies')
+      .select('main_rule_id, dependent_rule_id')
+      .eq('user_id', userId)
+    if (error) return []
+    return data || []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Add a dependency link (main rule triggers dependent rule).
+ * Ignores duplicates via the table's unique constraint.
+ */
+export async function addDependency(userId, mainRuleId, dependentRuleId) {
+  const { error } = await supabase
+    .from('rule_dependencies')
+    .insert({ user_id: userId, main_rule_id: mainRuleId, dependent_rule_id: dependentRuleId })
+  if (error && error.code !== '23505') throw error // 23505 = unique_violation (already linked)
+}
+
+/**
+ * Remove a dependency link.
+ */
+export async function removeDependency(userId, mainRuleId, dependentRuleId) {
+  const { error } = await supabase
+    .from('rule_dependencies')
+    .delete()
+    .eq('user_id', userId)
+    .eq('main_rule_id', mainRuleId)
+    .eq('dependent_rule_id', dependentRuleId)
+  if (error) throw error
+}
+
+/**
  * Build entry rows for the selected dependent rules on a given date.
  * selectedMap maps dependent_rule_id -> boolean.
  */

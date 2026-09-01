@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { useRefresh } from '../context/RefreshContext'
+import { getAllDependencies, addDependency, removeDependency } from '../lib/dependencies'
 
 export default function RulesEditor() {
   const { triggerRefresh } = useRefresh()
   const [rules, setRules] = useState([])
+  const [deps, setDeps] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
+  const [managingDeps, setManagingDeps] = useState(null)
   const { execute } = useAsyncWithToast()
 
   useEffect(() => {
@@ -31,6 +34,9 @@ export default function RulesEditor() {
 
       if (error) throw error
       setRules(data || [])
+
+      const allDeps = await getAllDependencies(session.user.id)
+      setDeps(allDeps)
     } catch (err) {
       console.error(err)
     } finally {
@@ -41,6 +47,7 @@ export default function RulesEditor() {
   const handleEdit = (rule) => {
     setEditing(rule.id)
     setEditValues({ ...rule })
+    setManagingDeps(null)
   }
 
   const handleCancel = () => {
@@ -85,6 +92,35 @@ export default function RulesEditor() {
       { successMsg: rule.enabled ? 'Regel deaktiviert' : 'Regel aktiviert' },
     )
   }
+
+  // Is dependentId currently a dependent of mainId?
+  const isDependent = (mainId, dependentId) =>
+    deps.some((d) => d.main_rule_id === mainId && d.dependent_rule_id === dependentId)
+
+  const handleToggleDependency = async (mainRule, dependentRule) => {
+    const linked = isDependent(mainRule.id, dependentRule.id)
+    await execute(
+      async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) throw new Error('Not authenticated')
+
+        if (linked) {
+          await removeDependency(session.user.id, mainRule.id, dependentRule.id)
+        } else {
+          await addDependency(session.user.id, mainRule.id, dependentRule.id)
+        }
+        await fetchRules()
+      },
+      {
+        successMsg: linked
+          ? `${dependentRule.subtype} entfernt`
+          : `${dependentRule.subtype} hinzugefügt`,
+      },
+    )
+  }
+
+  const dependentCount = (mainId) =>
+    deps.filter((d) => d.main_rule_id === mainId).length
 
   if (loading) {
     return <p className="text-sm text-teal/60">Lädt Fälligkeitsregeln...</p>
@@ -134,44 +170,89 @@ export default function RulesEditor() {
               </div>
             ) : (
               // View mode
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-teal">
-                    {rule.category} - {rule.subtype}
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-teal">
+                      {rule.category} - {rule.subtype}
+                    </div>
+                    <div className="text-xs text-teal/60">
+                      Alle <strong>{rule.interval_days}</strong> Tage
+                      {dependentCount(rule.id) > 0 && (
+                        <span className="ml-1">· 🔗 {dependentCount(rule.id)}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs text-teal/60">
-                    Alle <strong>{rule.interval_days}</strong> Tage
+
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleToggle(rule)}
+                      className={`px-2 py-1 text-xs rounded font-medium transition ${
+                        rule.enabled
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {rule.enabled ? 'An' : 'Aus'}
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setManagingDeps(managingDeps === rule.id ? null : rule.id)
+                      }
+                      className={`px-2 py-1 text-xs rounded font-medium transition ${
+                        managingDeps === rule.id
+                          ? 'bg-chestnut text-paper'
+                          : 'bg-chestnut/10 text-chestnut hover:bg-chestnut/20'
+                      }`}
+                    >
+                      🔗
+                    </button>
+
+                    <button
+                      onClick={() => handleEdit(rule)}
+                      className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
+                    >
+                      Bearbeiten
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => handleToggle(rule)}
-                    className={`px-2 py-1 text-xs rounded font-medium transition ${
-                      rule.enabled
-                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {rule.enabled ? 'An' : 'Aus'}
-                  </button>
-
-                  <button
-                    onClick={() => handleEdit(rule)}
-                    className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
-                  >
-                    Bearbeiten
-                  </button>
-                </div>
-              </div>
+                {managingDeps === rule.id && (
+                  <div className="mt-3 space-y-1.5 border-t border-teal/10 pt-3">
+                    <p className="text-xs font-medium text-teal">
+                      Diese Aufgaben laufen mit, wenn „{rule.subtype}" erledigt wird:
+                    </p>
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                      {rules
+                        .filter((r) => r.id !== rule.id)
+                        .map((other) => (
+                          <label
+                            key={other.id}
+                            className="flex items-center gap-2 text-sm cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isDependent(rule.id, other.id)}
+                              onChange={() => handleToggleDependency(rule, other)}
+                              className="rounded border-teal"
+                            />
+                            <span className="text-teal">
+                              {other.category} - {other.subtype}
+                            </span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}
       </div>
 
-
       <p className="text-xs text-teal/50 italic">
-        💡 Tipp: Im ersten Lebenjahr (bis 13.04.2027) empfehlen wir monatliches Entwurmen (30 Tage).
+        💡 Tipp: Über 🔗 legst du fest, welche Aufgaben automatisch mitlaufen (z.B. Vollschur → Baden, Krallen).
       </p>
     </div>
   )
