@@ -252,7 +252,7 @@ export default function RulesEditor() {
       </div>
 
       <p className="text-xs text-teal/50 italic">
-        💡 Tipp: Über 🔗 legst du fest, welche Aufgaben automatisch mitlaufen (z.B. Vollschur → Baden, Krallen).
+        💡 Tipp: Über 🔗 legst du fest, welche Aufgaben automatisch mitlaufen (z.B. Schur komplett → Baden, Krallen geschnitten).
       </p>
     </div>
   )

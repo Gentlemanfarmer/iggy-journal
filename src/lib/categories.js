@@ -1,13 +1,23 @@
 export const categories = {
-  Fell: ['Vollschur', 'Baden (Shampoo)', 'Abspülen', 'Bürsten', 'Krallen', 'Augen', 'Bart', 'Intimschur', 'Ohren'],
+  Pflege: [
+    'Schur komplett',
+    'Baden',
+    'Abspülen',
+    'Bürsten',
+    'Krallen geschnitten',
+    'Hygieneschur',
+    'Augen freigeschnitten',
+    'Bart getrimmt',
+    'Ohren',
+  ],
   Futter: ['Fütterung', 'Futterwechsel', 'Leckerli'],
   Gewicht: ['Wiegen'],
   Training: ['Session', 'Kommando gelernt', 'Ruheübung', 'Leinentraining', 'Nasenarbeit', 'Sozialisierung', 'Meilenstein'],
-  Medizin: ['Tierarzt', 'Impfung', 'Entwurmung', 'Zeckenschutz', 'Medikament', 'Symptom'],
+  Medizin: ['Tierarzt', 'Impfung', 'Entwurmt', 'Zeckenschutz gegeben', 'Medikament', 'Symptom'],
 }
 
 export const categoryColors = {
-  Fell: 'bg-teal text-paper',
+  Pflege: 'bg-teal text-paper',
   Futter: 'bg-chestnut text-paper',
   Gewicht: 'bg-amber-600 text-paper',
   Training: 'bg-blue-600 text-paper',
@@ -16,7 +26,7 @@ export const categoryColors = {
 
 export const getCategoryLabel = (category) => {
   const labels = {
-    Fell: 'Fellpflege',
+    Pflege: 'Pflege',
     Futter: 'Futter',
     Gewicht: 'Gewicht',
     Training: 'Training',
