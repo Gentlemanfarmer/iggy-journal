@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories } from '../lib/categories'
-import { useAsyncOperation } from '../hooks/useAsyncOperation'
+import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 
 export default function QuickAdd({ onEntryAdded }) {
-  const [step, setStep] = useState(0) // 0: category, 1: subtype, 2: details
+  const [step, setStep] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedSubtype, setSelectedSubtype] = useState(null)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
-  const { loading: saving, error, execute, clearError } = useAsyncOperation()
+  const { loading: saving, execute } = useAsyncWithToast()
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat)
@@ -25,49 +25,38 @@ export default function QuickAdd({ onEntryAdded }) {
   const handleSave = async () => {
     if (!selectedCategory || !selectedSubtype) return
 
-    await execute(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error('Not authenticated')
+    await execute(
+      async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) throw new Error('Not authenticated')
 
-      const entry = {
-        user_id: session.user.id,
-        date,
-        category: selectedCategory,
-        subtype: selectedSubtype,
-        note: note || null,
-        value: value ? parseFloat(value) : null,
-      }
+        const entry = {
+          user_id: session.user.id,
+          date,
+          category: selectedCategory,
+          subtype: selectedSubtype,
+          note: note || null,
+          value: value ? parseFloat(value) : null,
+        }
 
-      const { error } = await supabase.from('entries').insert([entry])
-      if (error) throw error
+        const { error } = await supabase.from('entries').insert([entry])
+        if (error) throw error
 
-      // Reset
-      setStep(0)
-      setSelectedCategory(null)
-      setSelectedSubtype(null)
-      setDate(new Date().toISOString().split('T')[0])
-      setNote('')
-      setValue('')
+        setStep(0)
+        setSelectedCategory(null)
+        setSelectedSubtype(null)
+        setDate(new Date().toISOString().split('T')[0])
+        setNote('')
+        setValue('')
 
-      onEntryAdded()
-    })
+        onEntryAdded()
+      },
+      { successMsg: 'Eintrag erstellt' },
+    )
   }
 
   return (
     <div className="space-y-4">
-      {/* Error Message */}
-      {error && (
-        <div className="rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-800">❌ {error}</p>
-          <button
-            onClick={clearError}
-            className="text-xs text-red-600 hover:text-red-800 mt-1"
-          >
-            Schließen
-          </button>
-        </div>
-      )}
-
       {step === 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-teal">Kategorie wählen:</p>

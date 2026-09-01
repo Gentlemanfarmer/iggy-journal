@@ -1,23 +1,24 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAsyncOperation } from '../hooks/useAsyncOperation'
+import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
-  const { loading, error, execute, clearError } = useAsyncOperation()
+  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
   const [newComponent, setNewComponent] = useState({ name: '', quantity_g: '', quantity_available_g: '' })
-  const [successMsg, setSuccessMsg] = useState('')
+  const { loading: saving, execute } = useAsyncWithToast()
 
   useEffect(() => {
     fetchComponents()
   }, [])
 
   const fetchComponents = async () => {
-    await execute(async () => {
+    setLoading(true)
+    try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error('Not authenticated')
+      if (!session?.user) return
 
       const { data, error } = await supabase
         .from('feeding_components')
@@ -27,36 +28,39 @@ export default function FeedingPlan() {
 
       if (error) throw error
       setComponents(data || [])
-    })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleAddComponent = async () => {
     if (!newComponent.name || !newComponent.quantity_g || newComponent.quantity_available_g === '') {
-      clearError()
-      // This will show validation error in UI
       return
     }
 
-    await execute(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error('Not authenticated')
+    await execute(
+      async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) throw new Error('Not authenticated')
 
-      const { error } = await supabase
-        .from('feeding_components')
-        .insert({
-          user_id: session.user.id,
-          name: newComponent.name,
-          quantity_g: parseInt(newComponent.quantity_g),
-          quantity_available_g: parseInt(newComponent.quantity_available_g),
-        })
+        const { error } = await supabase
+          .from('feeding_components')
+          .insert({
+            user_id: session.user.id,
+            name: newComponent.name,
+            quantity_g: parseInt(newComponent.quantity_g),
+            quantity_available_g: parseInt(newComponent.quantity_available_g),
+          })
 
-      if (error) throw error
+        if (error) throw error
 
-      setSuccessMsg('✅ Komponente hinzugefügt')
-      setNewComponent({ name: '', quantity_g: '', quantity_available_g: '' })
-      await fetchComponents()
-      setTimeout(() => setSuccessMsg(''), 3000)
-    })
+        setNewComponent({ name: '', quantity_g: '', quantity_available_g: '' })
+        await fetchComponents()
+      },
+      { successMsg: 'Komponente hinzugefügt' },
+    )
   }
 
   const handleEdit = (component) => {
@@ -70,41 +74,43 @@ export default function FeedingPlan() {
   }
 
   const handleSave = async (componentId) => {
-    await execute(async () => {
-      const { error } = await supabase
-        .from('feeding_components')
-        .update({
-          quantity_g: editValues.quantity_g,
-          quantity_available_g: editValues.quantity_available_g,
-          notes: editValues.notes,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', componentId)
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('feeding_components')
+          .update({
+            quantity_g: editValues.quantity_g,
+            quantity_available_g: editValues.quantity_available_g,
+            notes: editValues.notes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', componentId)
 
-      if (error) throw error
+        if (error) throw error
 
-      setSuccessMsg('✅ Komponente aktualisiert')
-      setEditing(null)
-      await fetchComponents()
-      setTimeout(() => setSuccessMsg(''), 3000)
-    })
+        setEditing(null)
+        await fetchComponents()
+      },
+      { successMsg: 'Komponente aktualisiert' },
+    )
   }
 
   const handleDelete = async (componentId) => {
     if (!confirm('Komponente wirklich löschen?')) return
 
-    await execute(async () => {
-      const { error } = await supabase
-        .from('feeding_components')
-        .delete()
-        .eq('id', componentId)
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('feeding_components')
+          .delete()
+          .eq('id', componentId)
 
-      if (error) throw error
+        if (error) throw error
 
-      setSuccessMsg('✅ Komponente gelöscht')
-      await fetchComponents()
-      setTimeout(() => setSuccessMsg(''), 3000)
-    })
+        await fetchComponents()
+      },
+      { successMsg: 'Komponente gelöscht' },
+    )
   }
 
   const calculateDailyConsumption = () => {
@@ -117,25 +123,6 @@ export default function FeedingPlan() {
 
   return (
     <div className="space-y-6">
-      {/* Error Message */}
-      {error && (
-        <div className="rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-800">❌ {error}</p>
-          <button
-            onClick={clearError}
-            className="text-xs text-red-600 hover:text-red-800 mt-1"
-          >
-            Schließen
-          </button>
-        </div>
-      )}
-
-      {/* Success Message */}
-      {successMsg && (
-        <div className="rounded border border-green-200 bg-green-50 p-3">
-          <p className="text-sm text-green-800">{successMsg}</p>
-        </div>
-      )}
 
       {/* Daily Summary */}
       <div className="rounded border border-teal/20 bg-teal/5 p-4">

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 
 export default function RulesEditor() {
   const [rules, setRules] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
   const [editValues, setEditValues] = useState({})
-  const [message, setMessage] = useState('')
+  const { execute } = useAsyncWithToast()
 
   useEffect(() => {
     fetchRules()
@@ -18,10 +19,8 @@ export default function RulesEditor() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      // Initialize user rules if needed
       await supabase.rpc('init_user_rules')
 
-      // Fetch user's rules
       const { data, error } = await supabase
         .from('user_rules')
         .select('*')
@@ -31,7 +30,7 @@ export default function RulesEditor() {
       if (error) throw error
       setRules(data || [])
     } catch (err) {
-      setMessage(`Fehler: ${err.message}`)
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -48,40 +47,39 @@ export default function RulesEditor() {
   }
 
   const handleSave = async (ruleId) => {
-    try {
-      const { error } = await supabase
-        .from('user_rules')
-        .update({
-          interval_days: editValues.interval_days,
-          label: editValues.label,
-          enabled: editValues.enabled,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', ruleId)
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('user_rules')
+          .update({
+            interval_days: editValues.interval_days,
+            label: editValues.label,
+            enabled: editValues.enabled,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', ruleId)
 
-      if (error) throw error
-
-      setMessage('✅ Regel gespeichert')
-      setEditing(null)
-      await fetchRules()
-      setTimeout(() => setMessage(''), 3000)
-    } catch (err) {
-      setMessage(`❌ Fehler: ${err.message}`)
-    }
+        if (error) throw error
+        setEditing(null)
+        await fetchRules()
+      },
+      { successMsg: 'Regel gespeichert' },
+    )
   }
 
   const handleToggle = async (rule) => {
-    try {
-      const { error } = await supabase
-        .from('user_rules')
-        .update({ enabled: !rule.enabled })
-        .eq('id', rule.id)
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('user_rules')
+          .update({ enabled: !rule.enabled })
+          .eq('id', rule.id)
 
-      if (error) throw error
-      await fetchRules()
-    } catch (err) {
-      setMessage(`❌ Fehler: ${err.message}`)
-    }
+        if (error) throw error
+        await fetchRules()
+      },
+      { successMsg: rule.enabled ? 'Regel deaktiviert' : 'Regel aktiviert' },
+    )
   }
 
   if (loading) {
@@ -167,15 +165,6 @@ export default function RulesEditor() {
         ))}
       </div>
 
-      {message && (
-        <p
-          className={`text-xs ${
-            message.includes('✅') ? 'text-teal' : 'text-red-600'
-          }`}
-        >
-          {message}
-        </p>
-      )}
 
       <p className="text-xs text-teal/50 italic">
         💡 Tipp: Im ersten Lebenjahr (bis 13.04.2027) empfehlen wir monatliches Entwurmen (30 Tage).
