@@ -46,6 +46,6 @@ from public.user_rules ur1
 cross join public.user_rules ur2
 where
   ur1.category = 'Fell' and ur1.subtype = 'Vollschur'
-  and ur2.category = 'Fell' and ur2.subtype in ('Baden', 'Intimschur', 'Augen', 'Bart')
+  and ur2.category = 'Fell' and ur2.subtype in ('Baden', 'Intimschur', 'Augen', 'Bart', 'Krallen')
   and ur1.user_id = ur2.user_id
 on conflict do nothing;

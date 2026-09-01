@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { useRefresh } from '../context/RefreshContext'
@@ -6,10 +6,41 @@ import { useRefresh } from '../context/RefreshContext'
 export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
+  const [dependencies, setDependencies] = useState([])
+  const [selectedDeps, setSelectedDeps] = useState({})
   const { execute, isLoading } = useAsyncWithToast()
   const { triggerRefresh } = useRefresh()
 
-  if (!isOpen) return null
+  useEffect(() => {
+    if (isOpen && rule) {
+      loadDependencies()
+    }
+  }, [isOpen, rule])
+
+  const loadDependencies = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+
+      const { data: deps } = await supabase
+        .from('rule_dependencies')
+        .select('dependent_rule_id, user_rules!dependent_rule_id(*)')
+        .eq('main_rule_id', rule.id)
+        .eq('user_id', session.user.id)
+
+      if (deps?.length > 0) {
+        setDependencies(deps)
+        // Initialize all as checked
+        const initial = {}
+        deps.forEach((dep) => {
+          initial[dep.dependent_rule_id] = true
+        })
+        setSelectedDeps(initial)
+      }
+    } catch (err) {
+      console.log('Dependencies not available yet')
+    }
+  }
 
   const handleSubmit = async () => {
     await execute(
@@ -20,7 +51,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
         const today = new Date().toISOString().split('T')[0]
 
         // Create main entry
-        const { data: mainEntry, error: entryError } = await supabase
+        const { error: entryError } = await supabase
           .from('entries')
           .insert({
             user_id: session.user.id,
@@ -30,34 +61,29 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
             note: note || null,
             value: value ? parseFloat(value) : null,
           })
-          .select()
 
         if (entryError) throw entryError
 
-        // Get dependencies for this rule (gracefully handle if table doesn't exist yet)
-        try {
-          const { data: deps, error: depsError } = await supabase
-            .from('rule_dependencies')
-            .select('dependent_rule_id, user_rules!dependent_rule_id(*)')
-            .eq('main_rule_id', rule.id)
-            .eq('user_id', session.user.id)
+        // Create entries for selected dependent rules
+        const selectedDepsArray = dependencies.filter(
+          (dep) => selectedDeps[dep.dependent_rule_id],
+        )
 
-          if (!depsError && deps?.length > 0) {
-            // Create entries for all dependent rules
-            const dependentEntries = deps.map((dep) => ({
-              user_id: session.user.id,
-              category: dep.user_rules.category,
-              subtype: dep.user_rules.subtype,
-              date: today,
-              note: `Auto-created via ${rule.subtype}`,
-              value: null,
-            }))
+        if (selectedDepsArray.length > 0) {
+          const dependentEntries = selectedDepsArray.map((dep) => ({
+            user_id: session.user.id,
+            category: dep.user_rules.category,
+            subtype: dep.user_rules.subtype,
+            date: today,
+            note: null,
+            value: null,
+          }))
 
-            await supabase.from('entries').insert(dependentEntries)
-          }
-        } catch (err) {
-          // Dependencies feature not yet available (migration pending)
-          console.log('Rule dependencies not yet configured')
+          const { error: depError } = await supabase
+            .from('entries')
+            .insert(dependentEntries)
+
+          if (depError) throw depError
         }
 
         triggerRefresh()
@@ -71,12 +97,16 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const handleClose = () => {
     setNote('')
     setValue('')
+    setDependencies([])
+    setSelectedDeps({})
     onClose()
   }
 
+  if (!isOpen) return null
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-96 rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
+      <div className="w-96 max-h-96 overflow-y-auto rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
         <h2 className="mb-4 text-lg font-semibold text-teal">
           {rule.category} - {rule.subtype}
         </h2>
@@ -107,6 +137,30 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
               placeholder="z.B. 5.2"
               className="w-full rounded border border-teal/20 px-3 py-2 text-sm text-teal placeholder:text-teal/40"
             />
+          </div>
+        )}
+
+        {dependencies.length > 0 && (
+          <div className="mb-4 space-y-2 border-t border-teal/10 pt-3">
+            <p className="text-xs font-medium text-teal">Abhängige Aufgaben:</p>
+            {dependencies.map((dep) => (
+              <label key={dep.dependent_rule_id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedDeps[dep.dependent_rule_id] || false}
+                  onChange={(e) =>
+                    setSelectedDeps({
+                      ...selectedDeps,
+                      [dep.dependent_rule_id]: e.target.checked,
+                    })
+                  }
+                  className="rounded border-teal"
+                />
+                <span className="text-teal">
+                  {dep.user_rules.subtype} auch erledigt?
+                </span>
+              </label>
+            ))}
           </div>
         )}
 
