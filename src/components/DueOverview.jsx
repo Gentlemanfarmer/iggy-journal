@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categoryColors } from '../lib/categories'
 import { useRefresh } from '../context/RefreshContext'
+import QuickEntryModal from './QuickEntryModal'
 
 function DueOverviewComponent() {
   const [rules, setRules] = useState([])
   const [lastEntries, setLastEntries] = useState({})
   const [loading, setLoading] = useState(true)
+  const [selectedRule, setSelectedRule] = useState(null)
   const { refreshKey } = useRefresh()
 
   useEffect(() => {
@@ -80,56 +82,75 @@ function DueOverviewComponent() {
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-teal/60">Pflege-Fälligkeiten basierend auf den letzten Einträgen:</p>
-      <div className="space-y-3">
-        {rules.map((rule) => {
-          const lastEntry = lastEntries[`${rule.category}-${rule.subtype}`]
-          const dueInfo = calculateDue(lastEntry, rule.interval_days)
+    <>
+      <div className="space-y-4">
+        <p className="text-sm text-teal/60">Pflege-Fälligkeiten basierend auf den letzten Einträgen:</p>
+        <div className="space-y-3">
+          {rules.map((rule) => {
+            const lastEntry = lastEntries[`${rule.category}-${rule.subtype}`]
+            const dueInfo = calculateDue(lastEntry, rule.interval_days)
 
-          const statusColors = {
-            overdue: 'border-red-500 bg-red-50',
-            today: 'border-amber-500 bg-amber-50',
-            pending: 'border-teal/30 bg-teal/5',
-            niemals: 'border-gray-300 bg-gray-50',
-          }
+            const statusColors = {
+              overdue: 'border-red-500 bg-red-50',
+              today: 'border-amber-500 bg-amber-50',
+              pending: 'border-teal/30 bg-teal/5',
+              niemals: 'border-gray-300 bg-gray-50',
+            }
 
-          return (
-            <div
-              key={`${rule.category}-${rule.subtype}`}
-              className={`flex items-center justify-between rounded border-2 p-3 ${statusColors[dueInfo.status]}`}
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`${categoryColors[rule.category]} rounded px-2 py-0.5 text-xs font-medium`}>
-                    {rule.subtype}
-                  </span>
-                  <span className="text-xs text-teal/60">{rule.interval_days}d</span>
+            return (
+              <div
+                key={`${rule.category}-${rule.subtype}`}
+                className={`flex items-center justify-between rounded border-2 p-3 ${statusColors[dueInfo.status]}`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`${categoryColors[rule.category]} rounded px-2 py-0.5 text-xs font-medium`}>
+                      {rule.subtype}
+                    </span>
+                    <span className="text-xs text-teal/60">{rule.interval_days}d</span>
+                  </div>
+                  {lastEntry && (
+                    <p className="mt-1 text-xs text-teal/60">
+                      Letztens: {lastEntry.date}
+                    </p>
+                  )}
                 </div>
-                {lastEntry && (
-                  <p className="mt-1 text-xs text-teal/60">
-                    Letztens: {lastEntry.date}
-                  </p>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p
+                      className={`text-sm font-medium ${
+                        dueInfo.status === 'overdue'
+                          ? 'text-red-600'
+                          : dueInfo.status === 'today'
+                            ? 'text-amber-600'
+                            : 'text-teal'
+                      }`}
+                    >
+                      {dueInfo.label}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedRule(rule)}
+                    className="whitespace-nowrap rounded bg-teal px-3 py-1 text-xs font-medium text-paper hover:bg-teal/90 transition"
+                  >
+                    ✓ Erledigt
+                  </button>
+                </div>
               </div>
-              <div className="text-right">
-                <p
-                  className={`text-sm font-medium ${
-                    dueInfo.status === 'overdue'
-                      ? 'text-red-600'
-                      : dueInfo.status === 'today'
-                        ? 'text-amber-600'
-                        : 'text-teal'
-                  }`}
-                >
-                  {dueInfo.label}
-                </p>
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
+
+      <QuickEntryModal
+        rule={selectedRule}
+        isOpen={!!selectedRule}
+        onClose={() => setSelectedRule(null)}
+        onSuccess={() => {
+          fetchData()
+        }}
+      />
+    </>
   )
 }
 
