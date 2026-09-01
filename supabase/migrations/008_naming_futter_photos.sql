@@ -38,6 +38,11 @@ insert into storage.buckets (id, name, public)
 values ('photos', 'photos', true)
 on conflict (id) do nothing;
 
+-- Drop existing policies if re-running
+drop policy if exists "Users can upload own photos" on storage.objects;
+drop policy if exists "Public photo read access" on storage.objects;
+drop policy if exists "Users can delete own photos" on storage.objects;
+
 -- Allow authenticated users to upload into their own folder
 create policy "Users can upload own photos"
 on storage.objects for insert
