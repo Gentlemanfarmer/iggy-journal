@@ -7,8 +7,8 @@
 create table if not exists public.rule_dependencies (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  main_rule_id uuid not null references public.user_rules(id) on delete cascade,
-  dependent_rule_id uuid not null references public.user_rules(id) on delete cascade,
+  main_rule_id integer not null references public.user_rules(id) on delete cascade,
+  dependent_rule_id integer not null references public.user_rules(id) on delete cascade,
   created_at timestamptz not null default now(),
   unique(user_id, main_rule_id, dependent_rule_id)
 );
@@ -37,61 +37,15 @@ create policy "Users can delete own dependencies"
 -- =====================================================================
 -- 3. Initialize default dependencies for new users
 -- =====================================================================
-create or replace function public.init_rule_dependencies()
-returns void as $$
-declare
-  v_user_id uuid;
-  v_vollschur_id uuid;
-  v_baden_id uuid;
-  v_intimschur_id uuid;
-  v_augen_id uuid;
-  v_bart_id uuid;
-begin
-  v_user_id := auth.uid();
-
-  if v_user_id is null then
-    raise exception 'Not authenticated';
-  end if;
-
-  -- Get rule IDs for this user
-  select id into v_vollschur_id from public.user_rules
-    where user_id = v_user_id and category = 'Fell' and subtype = 'Vollschur' limit 1;
-
-  select id into v_baden_id from public.user_rules
-    where user_id = v_user_id and category = 'Fell' and subtype = 'Baden' limit 1;
-
-  select id into v_intimschur_id from public.user_rules
-    where user_id = v_user_id and category = 'Fell' and subtype = 'Intimschur' limit 1;
-
-  select id into v_augen_id from public.user_rules
-    where user_id = v_user_id and category = 'Fell' and subtype = 'Augen' limit 1;
-
-  select id into v_bart_id from public.user_rules
-    where user_id = v_user_id and category = 'Fell' and subtype = 'Bart' limit 1;
-
-  -- Only create dependencies if all rules exist and dependencies don't exist yet
-  if v_vollschur_id is not null and v_baden_id is not null then
-    insert into public.rule_dependencies (user_id, main_rule_id, dependent_rule_id)
-    values (v_user_id, v_vollschur_id, v_baden_id)
-    on conflict do nothing;
-  end if;
-
-  if v_vollschur_id is not null and v_intimschur_id is not null then
-    insert into public.rule_dependencies (user_id, main_rule_id, dependent_rule_id)
-    values (v_user_id, v_vollschur_id, v_intimschur_id)
-    on conflict do nothing;
-  end if;
-
-  if v_vollschur_id is not null and v_augen_id is not null then
-    insert into public.rule_dependencies (user_id, main_rule_id, dependent_rule_id)
-    values (v_user_id, v_vollschur_id, v_augen_id)
-    on conflict do nothing;
-  end if;
-
-  if v_vollschur_id is not null and v_bart_id is not null then
-    insert into public.rule_dependencies (user_id, main_rule_id, dependent_rule_id)
-    values (v_user_id, v_vollschur_id, v_bart_id)
-    on conflict do nothing;
-  end if;
-end;
-$$ language plpgsql security definer;
+insert into public.rule_dependencies (user_id, main_rule_id, dependent_rule_id)
+select
+  ur1.user_id,
+  ur1.id as main_rule_id,
+  ur2.id as dependent_rule_id
+from public.user_rules ur1
+cross join public.user_rules ur2
+where
+  ur1.category = 'Fell' and ur1.subtype = 'Vollschur'
+  and ur2.category = 'Fell' and ur2.subtype in ('Baden', 'Intimschur', 'Augen', 'Bart')
+  and ur1.user_id = ur2.user_id
+on conflict do nothing;
