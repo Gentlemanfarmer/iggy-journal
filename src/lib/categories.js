@@ -1,5 +1,5 @@
 export const categories = {
-  Fell: ['Vollschur', 'Baden', 'Bürsten', 'Krallen', 'Augen', 'Bart', 'Intimschur', 'Ohren'],
+  Fell: ['Vollschur', 'Baden (Shampoo)', 'Abspülen', 'Bürsten', 'Krallen', 'Augen', 'Bart', 'Intimschur', 'Ohren'],
   Futter: ['Fütterung', 'Futterwechsel', 'Leckerli'],
   Gewicht: ['Wiegen'],
   Training: ['Session', 'Kommando gelernt', 'Ruheübung', 'Leinentraining', 'Nasenarbeit', 'Sozialisierung', 'Meilenstein'],
