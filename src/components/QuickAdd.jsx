@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories } from '../lib/categories'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { getRule, getDependencies, buildDependentEntries } from '../lib/dependencies'
 
 export default function QuickAdd({ onEntryAdded }) {
   const [step, setStep] = useState(0)
@@ -10,16 +11,48 @@ export default function QuickAdd({ onEntryAdded }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
+  const [dependencies, setDependencies] = useState([])
+  const [selectedDeps, setSelectedDeps] = useState({})
   const { loading: saving, execute } = useAsyncWithToast()
+
+  const resetForm = () => {
+    setStep(0)
+    setSelectedCategory(null)
+    setSelectedSubtype(null)
+    setDate(new Date().toISOString().split('T')[0])
+    setNote('')
+    setValue('')
+    setDependencies([])
+    setSelectedDeps({})
+  }
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat)
     setStep(1)
   }
 
-  const handleSelectSubtype = (subtype) => {
+  const handleSelectSubtype = async (subtype) => {
     setSelectedSubtype(subtype)
     setStep(2)
+    setDependencies([])
+    setSelectedDeps({})
+
+    // Load dependent tasks for this rule (if any)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+
+    const rule = await getRule(session.user.id, selectedCategory, subtype)
+    if (!rule) return
+
+    const deps = await getDependencies(session.user.id, rule.id)
+    if (deps.length > 0) {
+      setDependencies(deps)
+      const initial = {}
+      deps.forEach((dep) => {
+        initial[dep.dependent_rule_id] = true
+      })
+      setSelectedDeps(initial)
+    }
   }
 
   const handleSave = async () => {
@@ -42,13 +75,19 @@ export default function QuickAdd({ onEntryAdded }) {
         const { error } = await supabase.from('entries').insert([entry])
         if (error) throw error
 
-        setStep(0)
-        setSelectedCategory(null)
-        setSelectedSubtype(null)
-        setDate(new Date().toISOString().split('T')[0])
-        setNote('')
-        setValue('')
+        // Create entries for selected dependent tasks (same date)
+        const dependentEntries = buildDependentEntries(
+          session.user.id,
+          dependencies,
+          selectedDeps,
+          date,
+        )
+        if (dependentEntries.length > 0) {
+          const { error: depError } = await supabase.from('entries').insert(dependentEntries)
+          if (depError) throw depError
+        }
 
+        resetForm()
         onEntryAdded()
       },
       { successMsg: 'Eintrag erstellt' },
@@ -141,6 +180,28 @@ export default function QuickAdd({ onEntryAdded }) {
               rows="3"
             />
           </div>
+
+          {dependencies.length > 0 && (
+            <div className="space-y-2 border-t border-teal/10 pt-3">
+              <p className="text-xs font-medium text-teal">Abhängige Aufgaben:</p>
+              {dependencies.map((dep) => (
+                <label key={dep.dependent_rule_id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedDeps[dep.dependent_rule_id] || false}
+                    onChange={(e) =>
+                      setSelectedDeps({
+                        ...selectedDeps,
+                        [dep.dependent_rule_id]: e.target.checked,
+                      })
+                    }
+                    className="rounded border-teal"
+                  />
+                  <span className="text-teal">{dep.user_rules.subtype} auch erledigt?</span>
+                </label>
+              ))}
+            </div>
+          )}
 
           <button
             onClick={handleSave}

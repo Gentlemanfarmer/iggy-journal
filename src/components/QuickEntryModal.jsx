@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { useRefresh } from '../context/RefreshContext'
+import { getDependencies, buildDependentEntries } from '../lib/dependencies'
 
 export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('')
@@ -18,27 +19,18 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   }, [isOpen, rule])
 
   const loadDependencies = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
 
-      const { data: deps } = await supabase
-        .from('rule_dependencies')
-        .select('dependent_rule_id, user_rules!dependent_rule_id(*)')
-        .eq('main_rule_id', rule.id)
-        .eq('user_id', session.user.id)
-
-      if (deps?.length > 0) {
-        setDependencies(deps)
-        // Initialize all as checked
-        const initial = {}
-        deps.forEach((dep) => {
-          initial[dep.dependent_rule_id] = true
-        })
-        setSelectedDeps(initial)
-      }
-    } catch (err) {
-      console.log('Dependencies not available yet')
+    const deps = await getDependencies(session.user.id, rule.id)
+    if (deps.length > 0) {
+      setDependencies(deps)
+      // Initialize all as checked
+      const initial = {}
+      deps.forEach((dep) => {
+        initial[dep.dependent_rule_id] = true
+      })
+      setSelectedDeps(initial)
     }
   }
 
@@ -64,25 +56,15 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
 
         if (entryError) throw entryError
 
-        // Create entries for selected dependent rules
-        const selectedDepsArray = dependencies.filter(
-          (dep) => selectedDeps[dep.dependent_rule_id],
+        // Create entries for selected dependent rules (same date)
+        const dependentEntries = buildDependentEntries(
+          session.user.id,
+          dependencies,
+          selectedDeps,
+          today,
         )
-
-        if (selectedDepsArray.length > 0) {
-          const dependentEntries = selectedDepsArray.map((dep) => ({
-            user_id: session.user.id,
-            category: dep.user_rules.category,
-            subtype: dep.user_rules.subtype,
-            date: today,
-            note: null,
-            value: null,
-          }))
-
-          const { error: depError } = await supabase
-            .from('entries')
-            .insert(dependentEntries)
-
+        if (dependentEntries.length > 0) {
+          const { error: depError } = await supabase.from('entries').insert(dependentEntries)
           if (depError) throw depError
         }
 
