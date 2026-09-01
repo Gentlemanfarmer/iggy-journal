@@ -99,17 +99,17 @@ function JournalViewComponent() {
               </div>
             </div>
           ))}
-        </div>
 
-        {hasMore && (
-          <button
-            onClick={loadMore}
-            disabled={loading}
-            className="w-full rounded border border-teal py-2 text-sm text-teal hover:bg-teal/5 disabled:opacity-50 transition"
-          >
-            {loading ? 'Lädt...' : 'Mehr laden'}
-          </button>
-        )}
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loading}
+              className="w-full rounded border border-teal py-2 text-sm text-teal hover:bg-teal/5 disabled:opacity-50 transition"
+            >
+              {loading ? 'Lädt...' : 'Mehr laden'}
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
