@@ -1,34 +1,42 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { categoryColors, getCategoryLabel } from '../lib/categories'
+import { categoryColors } from '../lib/categories'
+import { useRefresh } from '../context/RefreshContext'
 
-export default function DueOverview() {
+function DueOverviewComponent() {
   const [rules, setRules] = useState([])
   const [lastEntries, setLastEntries] = useState({})
   const [loading, setLoading] = useState(true)
+  const { refreshKey } = useRefresh()
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [refreshKey])
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Fetch rules
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+
+      // Fetch user's custom rules
       const { data: rulesData, error: rulesError } = await supabase
-        .from('rules')
+        .from('user_rules')
         .select('*')
+        .eq('user_id', session.user.id)
+        .eq('enabled', true)
         .order('interval_days', { ascending: false })
 
       if (rulesError) throw rulesError
       setRules(rulesData || [])
 
-      // Für jede Regel den letzten Eintrag fetchen
+      // Fetch last entry for each rule
       const lastEntriesMap = {}
       for (const rule of rulesData || []) {
         const { data, error } = await supabase
           .from('entries')
           .select('*')
+          .eq('user_id', session.user.id)
           .eq('category', rule.category)
           .eq('subtype', rule.subtype)
           .order('date', { ascending: false })
@@ -124,3 +132,5 @@ export default function DueOverview() {
     </div>
   )
 }
+
+export default DueOverviewComponent

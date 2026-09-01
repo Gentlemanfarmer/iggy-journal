@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { useRefresh } from '../context/RefreshContext'
 
 export default function RulesEditor() {
+  const { triggerRefresh } = useRefresh()
   const [rules, setRules] = useState([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null)
@@ -62,6 +64,7 @@ export default function RulesEditor() {
         if (error) throw error
         setEditing(null)
         await fetchRules()
+        triggerRefresh()
       },
       { successMsg: 'Regel gespeichert' },
     )
@@ -77,6 +80,7 @@ export default function RulesEditor() {
 
         if (error) throw error
         await fetchRules()
+        triggerRefresh()
       },
       { successMsg: rule.enabled ? 'Regel deaktiviert' : 'Regel aktiviert' },
     )
