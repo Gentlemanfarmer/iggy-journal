@@ -7,13 +7,16 @@ import { groupEntriesByDate } from '../utils/memoize'
 
 function JournalViewComponent() {
   const [selectedCategory, setSelectedCategory] = useState(null)
+  const [incidentFilter, setIncidentFilter] = useState(null)
   const { entries, loading, error, hasMore, loadMore, deleteEntry } = useFetchEntries()
   const { addToast } = useToast()
 
-  const filteredEntries = useMemo(
-    () => (selectedCategory ? entries.filter((e) => e.category === selectedCategory) : entries),
-    [entries, selectedCategory],
-  )
+  const filteredEntries = useMemo(() => {
+    let filtered = entries
+    if (selectedCategory) filtered = filtered.filter((e) => e.category === selectedCategory)
+    if (incidentFilter) filtered = filtered.filter((e) => e.incident_tag === incidentFilter)
+    return filtered
+  }, [entries, selectedCategory, incidentFilter])
 
   const groupedEntries = useMemo(
     () => groupEntriesByDate(filteredEntries),
@@ -64,6 +67,19 @@ function JournalViewComponent() {
         ))}
       </div>
 
+      {/* Incident Filter */}
+      {incidentFilter && (
+        <div className="flex items-center gap-2 rounded bg-amber-50 border border-amber-200 px-3 py-1.5">
+          <span className="text-xs text-amber-700">Vorfall: <strong>{incidentFilter}</strong></span>
+          <button
+            onClick={() => setIncidentFilter(null)}
+            className="text-xs text-amber-500 hover:text-amber-700"
+          >
+            ✕ Filter aufheben
+          </button>
+        </div>
+      )}
+
       {/* Zeitstrahl */}
       {loading ? (
         <p className="text-sm text-teal/60">Lädt...</p>
@@ -82,8 +98,22 @@ function JournalViewComponent() {
                     key={entry.id}
                     className="flex items-start gap-3 rounded border border-teal/20 bg-white p-3"
                   >
-                    <div className={`mt-0.5 rounded px-2 py-0.5 text-xs font-medium ${categoryColors[entry.category]}`}>
-                      {entry.subtype}
+                    <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${categoryColors[entry.category]}`}>
+                        {entry.subtype}
+                      </span>
+                      {entry.incident_tag && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIncidentFilter(entry.incident_tag)
+                            setSelectedCategory(null)
+                          }}
+                          className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-200 transition"
+                        >
+                          {entry.incident_tag}
+                        </button>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       {entry.note && <p className="text-sm text-teal">{entry.note}</p>}

@@ -11,10 +11,12 @@ import ExportData from '../components/ExportData'
 import RulesEditor from '../components/RulesEditor'
 import FeedingPlan from '../components/FeedingPlan'
 import FoodLibrary from '../components/FoodLibrary'
+import IncidentView from '../components/IncidentView'
 import Footer from '../components/Footer'
 
 const MORE_ITEMS = [
   { key: 'wissen', label: 'Wissen' },
+  { key: 'vorfälle', label: 'Vorfälle' },
   { key: 'bibliothek', label: 'Futterbibliothek' },
   { key: 'futter', label: 'Futter' },
   { key: 'verlauf', label: 'Verlauf' },
@@ -102,6 +104,7 @@ export default function Journal() {
           </div>
         )}
         {activeTab === 'wissen' && <KnowledgeBase />}
+        {activeTab === 'vorfälle' && <IncidentView />}
         {activeTab === 'bibliothek' && <FoodLibrary />}
         {activeTab === 'futter' && <FeedingPlan />}
         {activeTab === 'verlauf' && <AuditTrail />}

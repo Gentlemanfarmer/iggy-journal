@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories } from '../lib/categories'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { useIncidentTags } from '../hooks/useIncidentTags'
 import { getRule, getDependencies, buildDependentEntries } from '../lib/dependencies'
 
 export default function QuickAdd({ onEntryAdded }) {
@@ -12,9 +13,11 @@ export default function QuickAdd({ onEntryAdded }) {
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
   const [file, setFile] = useState(null)
+  const [incidentTag, setIncidentTag] = useState('')
   const [dependencies, setDependencies] = useState([])
   const [selectedDeps, setSelectedDeps] = useState({})
   const { loading: saving, execute } = useAsyncWithToast()
+  const existingTags = useIncidentTags()
 
   const resetForm = () => {
     setStep(0)
@@ -24,6 +27,7 @@ export default function QuickAdd({ onEntryAdded }) {
     setNote('')
     setValue('')
     setFile(null)
+    setIncidentTag('')
     setDependencies([])
     setSelectedDeps({})
   }
@@ -84,6 +88,7 @@ export default function QuickAdd({ onEntryAdded }) {
           note: note || null,
           value: value ? parseFloat(value) : null,
           photo_url: photoUrl,
+          incident_tag: incidentTag || null,
         }
 
         const { error } = await supabase.from('entries').insert([entry])
@@ -192,6 +197,23 @@ export default function QuickAdd({ onEntryAdded }) {
               placeholder="Besonderheiten, Beobachtungen..."
               rows="3"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-teal">Vorfall (optional)</label>
+            <input
+              list="incident-tags-qa"
+              type="text"
+              value={incidentTag}
+              onChange={(e) => setIncidentTag(e.target.value)}
+              className="mt-1 w-full rounded border border-teal bg-white px-2 py-1 text-sm text-teal"
+              placeholder="z.B. Durchfall Sep 26"
+            />
+            <datalist id="incident-tags-qa">
+              {existingTags.map((tag) => (
+                <option key={tag} value={tag} />
+              ))}
+            </datalist>
           </div>
 
           <div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { useIncidentTags } from '../hooks/useIncidentTags'
 import { useRefresh } from '../context/RefreshContext'
 import { getDependencies, buildDependentEntries } from '../lib/dependencies'
 
@@ -8,10 +9,12 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
   const [file, setFile] = useState(null)
+  const [incidentTag, setIncidentTag] = useState('')
   const [dependencies, setDependencies] = useState([])
   const [selectedDeps, setSelectedDeps] = useState({})
   const { execute, loading } = useAsyncWithToast()
   const { triggerRefresh } = useRefresh()
+  const existingTags = useIncidentTags()
 
   useEffect(() => {
     if (isOpen && rule) {
@@ -63,6 +66,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
             note: note || null,
             value: value ? parseFloat(value) : null,
             photo_url: photoUrl,
+            incident_tag: incidentTag || null,
           })
 
         if (entryError) throw entryError
@@ -90,6 +94,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
     setNote('')
     setValue('')
     setFile(null)
+    setIncidentTag('')
     setDependencies([])
     setSelectedDeps({})
     onClose()
@@ -132,6 +137,25 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
             />
           </div>
         )}
+
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium text-teal">
+            Vorfall (optional)
+          </label>
+          <input
+            list="incident-tags-modal"
+            type="text"
+            value={incidentTag}
+            onChange={(e) => setIncidentTag(e.target.value)}
+            placeholder="z.B. Durchfall Sep 26"
+            className="w-full rounded border border-teal/20 px-3 py-2 text-sm text-teal placeholder:text-teal/40"
+          />
+          <datalist id="incident-tags-modal">
+            {existingTags.map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+          </datalist>
+        </div>
 
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-teal">
