@@ -20,6 +20,7 @@ export default function FoodLibrary() {
   const [fileFront, setFileFront] = useState(null)
   const [fileBack, setFileBack] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const [zoomImg, setZoomImg] = useState(null)
   const [inventoryId, setInventoryId] = useState(null)
   const [inventoryAmount, setInventoryAmount] = useState('')
   const [inventoryUnit, setInventoryUnit] = useState('g')
@@ -370,16 +371,16 @@ export default function FoodLibrary() {
                     {(p.photo_front_url || p.photo_back_url) && (
                       <div className="space-y-3">
                         {p.photo_front_url && (
-                          <a href={p.photo_front_url} target="_blank" rel="noopener noreferrer">
+                          <button onClick={() => setZoomImg(p.photo_front_url)} className="w-full text-left">
                             <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
                             <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
-                          </a>
+                          </button>
                         )}
                         {p.photo_back_url && (
-                          <a href={p.photo_back_url} target="_blank" rel="noopener noreferrer">
+                          <button onClick={() => setZoomImg(p.photo_back_url)} className="w-full text-left">
                             <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
                             <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
-                          </a>
+                          </button>
                         )}
                       </div>
                     )}
@@ -407,6 +408,25 @@ export default function FoodLibrary() {
               </div>
             )
           })}
+        </div>
+      )}
+      {zoomImg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setZoomImg(null)}
+        >
+          <button
+            onClick={() => setZoomImg(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-black shadow"
+          >
+            ✕
+          </button>
+          <img
+            src={zoomImg}
+            alt="Vergrössert"
+            className="max-h-[90vh] max-w-full rounded object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
