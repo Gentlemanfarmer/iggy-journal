@@ -368,17 +368,17 @@ export default function FoodLibrary() {
                 {expanded === p.id && (
                   <div className="mt-3 space-y-3 border-t border-teal/10 pt-3">
                     {(p.photo_front_url || p.photo_back_url) && (
-                      <div className="flex gap-3">
+                      <div className="space-y-3">
                         {p.photo_front_url && (
-                          <a href={p.photo_front_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                          <a href={p.photo_front_url} target="_blank" rel="noopener noreferrer">
                             <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite</p>
+                            <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
                           </a>
                         )}
                         {p.photo_back_url && (
-                          <a href={p.photo_back_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                          <a href={p.photo_back_url} target="_blank" rel="noopener noreferrer">
                             <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite</p>
+                            <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
                           </a>
                         )}
                       </div>
