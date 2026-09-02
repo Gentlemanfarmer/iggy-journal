@@ -15,6 +15,29 @@ export function getDaysRemaining(remaining, component, mealsPerDay) {
   return Math.floor(remaining / dailyConsumption)
 }
 
+export function getProductRemaining(product, linkedComponents, mealsPerDay) {
+  if (!product.inventory_date || product.stock_amount == null) return null
+  const invDate = new Date(product.inventory_date + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const daysElapsed = Math.max(0, Math.floor((today - invDate) / (1000 * 60 * 60 * 24)))
+  const stockUnit = product.stock_unit || 'g'
+  const dailyConsumption = linkedComponents
+    .filter((c) => (c.unit || 'g') === stockUnit)
+    .reduce((sum, c) => sum + (c.quantity_g || 0) * mealsPerDay, 0)
+  return Math.max(0, product.stock_amount - dailyConsumption * daysElapsed)
+}
+
+export function getProductDaysRemaining(remaining, product, linkedComponents, mealsPerDay) {
+  if (remaining == null) return null
+  const stockUnit = product.stock_unit || 'g'
+  const dailyConsumption = linkedComponents
+    .filter((c) => (c.unit || 'g') === stockUnit)
+    .reduce((sum, c) => sum + (c.quantity_g || 0) * mealsPerDay, 0)
+  if (dailyConsumption === 0) return Infinity
+  return Math.floor(remaining / dailyConsumption)
+}
+
 export function getMealsPerDay() {
   try { return parseInt(localStorage.getItem('iggy_meals_per_day') || '3') } catch { return 3 }
 }

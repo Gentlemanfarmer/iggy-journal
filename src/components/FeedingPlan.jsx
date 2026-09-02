@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { formatDateDE } from '../lib/dates'
 import { categoryColors } from '../lib/categories'
-import { getRemaining, getDaysRemaining, getMealsPerDay, formatUnit, formatMealTotals, formatDailyTotals } from '../lib/feeding'
+import { getProductRemaining, getProductDaysRemaining, getMealsPerDay, formatUnit, formatMealTotals, formatDailyTotals } from '../lib/feeding'
 import AktivDogRechner from './AktivDogRechner'
 
 const UNITS = [
@@ -22,8 +22,6 @@ export default function FeedingPlan() {
   const [manualName, setManualName] = useState('')
   const [newComponent, setNewComponent] = useState({ quantity_g: '' })
   const [newUnit, setNewUnit] = useState('g')
-  const [inventoryId, setInventoryId] = useState(null)
-  const [inventoryAmount, setInventoryAmount] = useState('')
   const [lastWeight, setLastWeight] = useState(null)
   const [futterEntries, setFutterEntries] = useState([])
   const [mealsPerDay, setMealsPerDay] = useState(getMealsPerDay)
@@ -156,28 +154,6 @@ export default function FeedingPlan() {
     )
   }
 
-  const handleInventory = async (componentId) => {
-    if (!inventoryAmount && inventoryAmount !== '0') return
-    await execute(
-      async () => {
-        const { error } = await supabase
-          .from('feeding_components')
-          .update({
-            quantity_available_g: parseFloat(inventoryAmount),
-            inventory_date: new Date().toISOString().split('T')[0],
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', componentId)
-        if (error) throw error
-
-        setInventoryId(null)
-        setInventoryAmount('')
-        await fetchData()
-      },
-      { successMsg: 'Inventur gespeichert' },
-    )
-  }
-
   const updateMealsPerDay = (val) => {
     const n = Math.max(1, Math.min(10, parseInt(val) || 1))
     setMealsPerDay(n)
@@ -303,8 +279,19 @@ export default function FeedingPlan() {
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
             {components.map((component) => {
               const unit = component.unit || 'g'
-              const remaining = getRemaining(component, mealsPerDay)
-              const daysLeft = getDaysRemaining(remaining, component, mealsPerDay)
+              const product = component.product_id
+                ? libraryProducts.find((p) => p.id === component.product_id)
+                : null
+              const linked = product
+                ? components.filter((c) => c.product_id === product.id)
+                : []
+              const remaining = product
+                ? getProductRemaining(product, linked, mealsPerDay)
+                : null
+              const daysLeft = product
+                ? getProductDaysRemaining(remaining, product, linked, mealsPerDay)
+                : null
+              const stockUnit = product?.stock_unit || unit
 
               return (
                 <div key={component.id} className="border border-teal/20 rounded p-3 bg-white">
@@ -347,91 +334,49 @@ export default function FeedingPlan() {
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-start gap-3">
-                        {component.food_products?.photo_front_url && (
-                          <img
-                            src={component.food_products.photo_front_url}
-                            alt=""
-                            className="h-12 w-12 rounded border border-teal/20 object-cover flex-shrink-0"
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-teal">{component.name}</p>
-                          <p className="text-xs text-teal/60">
-                            <strong>{formatUnit(component.quantity_g, unit)}</strong> pro Mahlzeit
-                          </p>
-
-                          {remaining != null ? (
-                            <p className={`text-xs mt-0.5 ${daysLeft <= 7 ? 'text-red-600 font-medium' : daysLeft <= 14 ? 'text-amber-600' : 'text-teal/60'}`}>
-                              Vorrat: ~{Math.round(remaining)}{unit}
-                              {daysLeft != null && daysLeft !== Infinity && ` (noch ~${daysLeft} Tage)`}
-                              {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-teal/40 mt-0.5 italic">Keine Inventur</p>
-                          )}
-
-                          {component.inventory_date && (
-                            <p className="text-[10px] text-teal/40">
-                              Inventur: {formatDateDE(component.inventory_date)}
-                            </p>
-                          )}
-
-                          {component.notes && (
-                            <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
-                          )}
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => handleEdit(component)}
-                            className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
-                          >
-                            ✎
-                          </button>
-                          <button
-                            onClick={() => handleDelete(component.id)}
-                            className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Inventory */}
-                      {inventoryId === component.id ? (
-                        <div className="flex gap-2 mt-2 pt-2 border-t border-teal/10">
-                          <input
-                            type="number"
-                            placeholder={`Aktueller Vorrat (${unit})`}
-                            value={inventoryAmount}
-                            onChange={(e) => setInventoryAmount(e.target.value)}
-                            className="flex-1 rounded border border-teal text-sm px-2 py-1 text-teal"
-                            autoFocus
-                          />
-                          <button
-                            onClick={() => handleInventory(component.id)}
-                            disabled={saving}
-                            className="rounded bg-teal px-3 py-1 text-xs font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={() => { setInventoryId(null); setInventoryAmount('') }}
-                            className="rounded bg-gray-200 px-3 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => { setInventoryId(component.id); setInventoryAmount('') }}
-                          className="mt-2 w-full rounded border border-teal/20 py-1 text-xs font-medium text-teal/60 hover:bg-teal/5 hover:text-teal transition"
-                        >
-                          📋 Inventur
-                        </button>
+                    <div className="flex items-start gap-3">
+                      {component.food_products?.photo_front_url && (
+                        <img
+                          src={component.food_products.photo_front_url}
+                          alt=""
+                          className="h-12 w-12 rounded border border-teal/20 object-cover flex-shrink-0"
+                        />
                       )}
-                    </>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-teal">{component.name}</p>
+                        <p className="text-xs text-teal/60">
+                          <strong>{formatUnit(component.quantity_g, unit)}</strong> pro Mahlzeit
+                        </p>
+
+                        {remaining != null ? (
+                          <p className={`text-xs mt-0.5 ${daysLeft <= 7 ? 'text-red-600 font-medium' : daysLeft <= 14 ? 'text-amber-600' : 'text-teal/60'}`}>
+                            Vorrat: ~{Math.round(remaining)}{stockUnit}
+                            {daysLeft != null && daysLeft !== Infinity && ` (noch ~${daysLeft} Tage)`}
+                            {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
+                          </p>
+                        ) : product ? (
+                          <p className="text-xs text-teal/40 mt-0.5 italic">Keine Inventur</p>
+                        ) : null}
+
+                        {component.notes && (
+                          <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleEdit(component)}
+                          className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          onClick={() => handleDelete(component.id)}
+                          className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )

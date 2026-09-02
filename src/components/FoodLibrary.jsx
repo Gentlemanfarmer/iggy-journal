@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
+import { formatDateDE } from '../lib/dates'
+import { getProductRemaining, getProductDaysRemaining, getMealsPerDay, formatUnit } from '../lib/feeding'
+
+const UNITS = [
+  { value: 'g', label: 'g' },
+  { value: 'TL', label: 'TL' },
+  { value: 'EL', label: 'EL' },
+]
 
 export default function FoodLibrary() {
   const [products, setProducts] = useState([])
+  const [feedingComponents, setFeedingComponents] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -11,7 +20,12 @@ export default function FoodLibrary() {
   const [fileFront, setFileFront] = useState(null)
   const [fileBack, setFileBack] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const [inventoryId, setInventoryId] = useState(null)
+  const [inventoryAmount, setInventoryAmount] = useState('')
+  const [inventoryUnit, setInventoryUnit] = useState('g')
   const { execute, loading: saving } = useAsyncWithToast()
+
+  const mealsPerDay = getMealsPerDay()
 
   useEffect(() => {
     fetchProducts()
@@ -22,13 +36,22 @@ export default function FoodLibrary() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
-      const { data, error } = await supabase
-        .from('food_products')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('name')
-      if (error) throw error
-      setProducts(data || [])
+
+      const [prodRes, compRes] = await Promise.all([
+        supabase
+          .from('food_products')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('name'),
+        supabase
+          .from('feeding_components')
+          .select('*')
+          .eq('user_id', session.user.id),
+      ])
+
+      if (prodRes.error) throw prodRes.error
+      setProducts(prodRes.data || [])
+      setFeedingComponents(compRes.data || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -104,6 +127,30 @@ export default function FoodLibrary() {
     )
   }
 
+  const handleInventory = async (productId) => {
+    if (!inventoryAmount && inventoryAmount !== '0') return
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('food_products')
+          .update({
+            stock_amount: parseFloat(inventoryAmount),
+            stock_unit: inventoryUnit,
+            inventory_date: new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', productId)
+        if (error) throw error
+
+        setInventoryId(null)
+        setInventoryAmount('')
+        setInventoryUnit('g')
+        await fetchProducts()
+      },
+      { successMsg: 'Inventur gespeichert' },
+    )
+  }
+
   const startEdit = (product) => {
     setEditing(product.id)
     setForm({ name: product.name, brand: product.brand || '', notes: product.notes || '' })
@@ -119,6 +166,9 @@ export default function FoodLibrary() {
     setEditing(null)
     setShowForm(false)
   }
+
+  const getLinkedComponents = (productId) =>
+    feedingComponents.filter((c) => c.product_id === productId)
 
   if (loading) return <p className="text-sm text-teal/60">Lädt Bibliothek...</p>
 
@@ -199,79 +249,164 @@ export default function FoodLibrary() {
         <p className="text-sm text-teal/60 italic">Noch keine Produkte in der Bibliothek</p>
       ) : (
         <div className="space-y-2">
-          {products.map((p) => (
-            <div key={p.id} className="rounded border border-teal/20 bg-white p-3">
-              <div className="flex items-start justify-between">
-                <button
-                  onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                  className="flex-1 text-left"
-                >
-                  <p className="text-sm font-medium text-teal">{p.name}</p>
-                  {p.brand && <p className="text-xs text-teal/60">{p.brand}</p>}
-                </button>
-                <div className="flex gap-1">
+          {products.map((p) => {
+            const linked = getLinkedComponents(p.id)
+            const remaining = getProductRemaining(p, linked, mealsPerDay)
+            const daysLeft = getProductDaysRemaining(remaining, p, linked, mealsPerDay)
+            const stockUnit = p.stock_unit || 'g'
+
+            return (
+              <div key={p.id} className="rounded border border-teal/20 bg-white p-3">
+                <div className="flex items-start justify-between">
                   <button
-                    onClick={() => startEdit(p)}
-                    className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
+                    onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                    className="flex-1 text-left"
                   >
-                    ✎
+                    <p className="text-sm font-medium text-teal">{p.name}</p>
+                    {p.brand && <p className="text-xs text-teal/60">{p.brand}</p>}
                   </button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => startEdit(p)}
+                      className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
+
+                {/* Stock info */}
+                <div className="mt-2">
+                  {remaining != null ? (
+                    <p className={`text-xs ${daysLeft <= 7 ? 'text-red-600 font-medium' : daysLeft <= 14 ? 'text-amber-600' : 'text-teal/60'}`}>
+                      Vorrat: ~{Math.round(remaining)}{stockUnit}
+                      {daysLeft != null && daysLeft !== Infinity && ` (noch ~${daysLeft} Tage)`}
+                      {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
+                    </p>
+                  ) : linked.length > 0 ? (
+                    <p className="text-xs text-teal/40 italic">Keine Inventur</p>
+                  ) : null}
+                  {p.inventory_date && (
+                    <p className="text-[10px] text-teal/40">Inventur: {formatDateDE(p.inventory_date)}</p>
+                  )}
+                </div>
+
+                {/* Inventory form */}
+                {inventoryId === p.id ? (
+                  <div className="flex gap-2 mt-2 pt-2 border-t border-teal/10">
+                    <input
+                      type="number"
+                      placeholder="Aktueller Vorrat"
+                      value={inventoryAmount}
+                      onChange={(e) => setInventoryAmount(e.target.value)}
+                      className="flex-1 rounded border border-teal text-sm px-2 py-1 text-teal"
+                      autoFocus
+                    />
+                    <select
+                      value={inventoryUnit}
+                      onChange={(e) => setInventoryUnit(e.target.value)}
+                      className="w-14 rounded border border-teal text-sm px-1 py-1 text-teal bg-white"
+                    >
+                      {UNITS.map((u) => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleInventory(p.id)}
+                      disabled={saving}
+                      className="rounded bg-teal px-3 py-1 text-xs font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={() => { setInventoryId(null); setInventoryAmount(''); setInventoryUnit('g') }}
+                      className="rounded bg-gray-200 px-3 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setInventoryId(p.id)
+                      setInventoryAmount('')
+                      setInventoryUnit(p.stock_unit || 'g')
+                    }}
+                    className="mt-2 w-full rounded border border-teal/20 py-1 text-xs font-medium text-teal/60 hover:bg-teal/5 hover:text-teal transition"
+                  >
+                    📋 Inventur
+                  </button>
+                )}
+
+                {/* Thumbnails (collapsed) */}
+                {(p.photo_front_url || p.photo_back_url) && expanded !== p.id && (
+                  <div className="flex gap-2 mt-2">
+                    {p.photo_front_url && (
+                      <img
+                        src={p.photo_front_url}
+                        alt="Vorderseite"
+                        className="h-14 w-14 rounded border border-teal/20 object-cover"
+                      />
+                    )}
+                    {p.photo_back_url && (
+                      <img
+                        src={p.photo_back_url}
+                        alt="Rückseite"
+                        className="h-14 w-14 rounded border border-teal/20 object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded details */}
+                {expanded === p.id && (
+                  <div className="mt-3 space-y-3 border-t border-teal/10 pt-3">
+                    {(p.photo_front_url || p.photo_back_url) && (
+                      <div className="flex gap-3">
+                        {p.photo_front_url && (
+                          <a href={p.photo_front_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                            <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
+                            <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite</p>
+                          </a>
+                        )}
+                        {p.photo_back_url && (
+                          <a href={p.photo_back_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                            <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
+                            <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite</p>
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Linked feeding components */}
+                    {linked.length > 0 && (
+                      <div>
+                        <p className="text-xs text-teal/60 font-medium mb-1">Im Futterplan:</p>
+                        {linked.map((c) => (
+                          <p key={c.id} className="text-xs text-teal/50">
+                            {formatUnit(c.quantity_g, c.unit || 'g')} pro Mahlzeit
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {p.notes && (
+                      <p className="text-xs text-teal/60 whitespace-pre-wrap">{p.notes}</p>
+                    )}
+                    {!p.photo_front_url && !p.photo_back_url && !p.notes && linked.length === 0 && (
+                      <p className="text-xs text-teal/40 italic">Keine Details hinterlegt</p>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {(p.photo_front_url || p.photo_back_url) && expanded !== p.id && (
-                <div className="flex gap-2 mt-2">
-                  {p.photo_front_url && (
-                    <img
-                      src={p.photo_front_url}
-                      alt="Vorderseite"
-                      className="h-14 w-14 rounded border border-teal/20 object-cover"
-                    />
-                  )}
-                  {p.photo_back_url && (
-                    <img
-                      src={p.photo_back_url}
-                      alt="Rückseite"
-                      className="h-14 w-14 rounded border border-teal/20 object-cover"
-                    />
-                  )}
-                </div>
-              )}
-
-              {expanded === p.id && (
-                <div className="mt-3 space-y-3 border-t border-teal/10 pt-3">
-                  {(p.photo_front_url || p.photo_back_url) && (
-                    <div className="flex gap-3">
-                      {p.photo_front_url && (
-                        <a href={p.photo_front_url} target="_blank" rel="noopener noreferrer" className="flex-1">
-                          <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
-                          <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite</p>
-                        </a>
-                      )}
-                      {p.photo_back_url && (
-                        <a href={p.photo_back_url} target="_blank" rel="noopener noreferrer" className="flex-1">
-                          <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
-                          <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite</p>
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  {p.notes && (
-                    <p className="text-xs text-teal/60 whitespace-pre-wrap">{p.notes}</p>
-                  )}
-                  {!p.photo_front_url && !p.photo_back_url && !p.notes && (
-                    <p className="text-xs text-teal/40 italic">Keine Details hinterlegt</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

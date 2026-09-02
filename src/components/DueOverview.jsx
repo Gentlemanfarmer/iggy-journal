@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categoryColors } from '../lib/categories'
 import { formatDateDE } from '../lib/dates'
-import { getRemaining, getDaysRemaining, getMealsPerDay } from '../lib/feeding'
+import { getProductRemaining, getProductDaysRemaining, getMealsPerDay } from '../lib/feeding'
 import { useRefresh } from '../context/RefreshContext'
 import QuickEntryModal from './QuickEntryModal'
 
@@ -51,17 +51,26 @@ function DueOverviewComponent() {
       }
       setLastEntries(lastEntriesMap)
 
-      const { data: compData } = await supabase
-        .from('feeding_components')
-        .select('*')
-        .eq('user_id', session.user.id)
+      const [prodRes, compRes] = await Promise.all([
+        supabase
+          .from('food_products')
+          .select('*')
+          .eq('user_id', session.user.id),
+        supabase
+          .from('feeding_components')
+          .select('*')
+          .eq('user_id', session.user.id),
+      ])
+      const allProducts = prodRes.data || []
+      const allComponents = compRes.data || []
       const mealsPerDay = getMealsPerDay()
-      const stockWarnings = (compData || [])
-        .filter((c) => c.inventory_date && c.quantity_available_g != null)
-        .map((c) => {
-          const remaining = getRemaining(c, mealsPerDay)
-          const daysLeft = getDaysRemaining(remaining, c, mealsPerDay)
-          return { ...c, remaining, daysLeft }
+      const stockWarnings = allProducts
+        .filter((p) => p.inventory_date && p.stock_amount != null)
+        .map((p) => {
+          const linked = allComponents.filter((c) => c.product_id === p.id)
+          const remaining = getProductRemaining(p, linked, mealsPerDay)
+          const daysLeft = getProductDaysRemaining(remaining, p, linked, mealsPerDay)
+          return { ...p, remaining, daysLeft, unit: p.stock_unit || 'g' }
         })
         .filter((item) => item.daysLeft != null && item.daysLeft <= 14)
         .sort((a, b) => a.daysLeft - b.daysLeft)
