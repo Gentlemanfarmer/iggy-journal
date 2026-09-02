@@ -4,6 +4,7 @@ import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { formatDateDE } from '../lib/dates'
 import { categoryColors } from '../lib/categories'
 import { getRemaining, getDaysRemaining, getMealsPerDay, formatUnit, formatMealTotals, formatDailyTotals } from '../lib/feeding'
+import AktivDogRechner from './AktivDogRechner'
 
 const UNITS = [
   { value: 'g', label: 'g' },
@@ -219,6 +220,9 @@ export default function FeedingPlan() {
           </p>
         )}
       </div>
+
+      {/* AktivDog Recommendation */}
+      <AktivDogRechner lastWeight={lastWeight} feedingComponents={components} />
 
       {/* Add Component */}
       <div className="space-y-3 rounded border border-teal/20 bg-white p-4">
