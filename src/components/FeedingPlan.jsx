@@ -1,9 +1,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
-import { calculateDailyTotal } from '../utils/memoize'
 import { formatDateDE } from '../lib/dates'
 import { categoryColors } from '../lib/categories'
+import { getRemaining, getDaysRemaining, getMealsPerDay, formatUnit, formatMealTotals, formatDailyTotals } from '../lib/feeding'
+
+const UNITS = [
+  { value: 'g', label: 'g' },
+  { value: 'TL', label: 'TL' },
+  { value: 'EL', label: 'EL' },
+]
 
 export default function FeedingPlan() {
   const [components, setComponents] = useState([])
@@ -13,12 +19,13 @@ export default function FeedingPlan() {
   const [editValues, setEditValues] = useState({})
   const [selectedProductId, setSelectedProductId] = useState('')
   const [manualName, setManualName] = useState('')
-  const [newComponent, setNewComponent] = useState({ quantity_g: '', quantity_available_g: '' })
+  const [newComponent, setNewComponent] = useState({ quantity_g: '' })
+  const [newUnit, setNewUnit] = useState('g')
+  const [inventoryId, setInventoryId] = useState(null)
+  const [inventoryAmount, setInventoryAmount] = useState('')
   const [lastWeight, setLastWeight] = useState(null)
   const [futterEntries, setFutterEntries] = useState([])
-  const [mealsPerDay, setMealsPerDay] = useState(() => {
-    try { return parseInt(localStorage.getItem('iggy_meals_per_day') || '3') } catch { return 3 }
-  })
+  const [mealsPerDay, setMealsPerDay] = useState(getMealsPerDay)
   const { loading: saving, execute } = useAsyncWithToast()
 
   useEffect(() => {
@@ -71,10 +78,10 @@ export default function FeedingPlan() {
   }
 
   const handleAddComponent = async () => {
-    const name = selectedProductId
+    const name = selectedProductId && selectedProductId !== 'manual'
       ? libraryProducts.find((p) => p.id === parseInt(selectedProductId))?.name
       : manualName
-    if (!name || !newComponent.quantity_g || newComponent.quantity_available_g === '') return
+    if (!name || !newComponent.quantity_g) return
 
     await execute(
       async () => {
@@ -86,13 +93,14 @@ export default function FeedingPlan() {
           .insert({
             user_id: session.user.id,
             name,
-            product_id: selectedProductId ? parseInt(selectedProductId) : null,
-            quantity_g: parseInt(newComponent.quantity_g),
-            quantity_available_g: parseInt(newComponent.quantity_available_g),
+            product_id: selectedProductId && selectedProductId !== 'manual' ? parseInt(selectedProductId) : null,
+            quantity_g: parseFloat(newComponent.quantity_g),
+            unit: newUnit,
           })
         if (error) throw error
 
-        setNewComponent({ quantity_g: '', quantity_available_g: '' })
+        setNewComponent({ quantity_g: '' })
+        setNewUnit('g')
         setSelectedProductId('')
         setManualName('')
         await fetchData()
@@ -103,7 +111,7 @@ export default function FeedingPlan() {
 
   const handleEdit = (component) => {
     setEditing(component.id)
-    setEditValues({ ...component })
+    setEditValues({ quantity_g: component.quantity_g, notes: component.notes || '' })
   }
 
   const handleCancel = () => {
@@ -117,9 +125,8 @@ export default function FeedingPlan() {
         const { error } = await supabase
           .from('feeding_components')
           .update({
-            quantity_g: editValues.quantity_g,
-            quantity_available_g: editValues.quantity_available_g,
-            notes: editValues.notes,
+            quantity_g: parseFloat(editValues.quantity_g),
+            notes: editValues.notes || null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', componentId)
@@ -148,13 +155,36 @@ export default function FeedingPlan() {
     )
   }
 
+  const handleInventory = async (componentId) => {
+    if (!inventoryAmount && inventoryAmount !== '0') return
+    await execute(
+      async () => {
+        const { error } = await supabase
+          .from('feeding_components')
+          .update({
+            quantity_available_g: parseFloat(inventoryAmount),
+            inventory_date: new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', componentId)
+        if (error) throw error
+
+        setInventoryId(null)
+        setInventoryAmount('')
+        await fetchData()
+      },
+      { successMsg: 'Inventur gespeichert' },
+    )
+  }
+
   const updateMealsPerDay = (val) => {
     const n = Math.max(1, Math.min(10, parseInt(val) || 1))
     setMealsPerDay(n)
     try { localStorage.setItem('iggy_meals_per_day', String(n)) } catch {}
   }
 
-  const perMeal = useMemo(() => calculateDailyTotal(components), [components])
+  const mealTotal = useMemo(() => formatMealTotals(components), [components])
+  const dailyTotal = useMemo(() => formatDailyTotals(components, mealsPerDay), [components, mealsPerDay])
 
   if (loading) {
     return <p className="text-sm text-teal/60">Lädt Fütterungsplan...</p>
@@ -179,8 +209,10 @@ export default function FeedingPlan() {
             className="w-14 rounded border border-teal/30 bg-white px-2 py-0.5 text-sm text-teal text-center"
           />
         </div>
-        <p className="text-2xl font-bold text-teal">{perMeal}g <span className="text-sm font-normal text-teal/60">pro Mahlzeit</span></p>
-        <p className="text-xs text-teal/60">Täglich: ~{perMeal * mealsPerDay}g</p>
+        <p className="text-2xl font-bold text-teal">
+          {mealTotal} <span className="text-sm font-normal text-teal/60">pro Mahlzeit</span>
+        </p>
+        <p className="text-xs text-teal/60">Täglich: {dailyTotal}</p>
         {lastWeight && (
           <p className="text-xs text-chestnut">
             Letztes Gewicht: {lastWeight.value} kg am {formatDateDE(lastWeight.date)}
@@ -188,7 +220,7 @@ export default function FeedingPlan() {
         )}
       </div>
 
-      {/* Add Component from Library */}
+      {/* Add Component */}
       <div className="space-y-3 rounded border border-teal/20 bg-white p-4">
         <h3 className="text-sm font-semibold text-teal">Komponente hinzufügen</h3>
 
@@ -233,18 +265,20 @@ export default function FeedingPlan() {
         <div className="flex gap-2">
           <input
             type="number"
-            placeholder="Menge pro Mahlzeit (g)"
+            placeholder="Menge pro Mahlzeit"
             value={newComponent.quantity_g}
             onChange={(e) => setNewComponent({ ...newComponent, quantity_g: e.target.value })}
             className="flex-1 rounded border border-teal text-sm px-2 py-1 text-teal"
           />
-          <input
-            type="number"
-            placeholder="Verfügbar (g)"
-            value={newComponent.quantity_available_g}
-            onChange={(e) => setNewComponent({ ...newComponent, quantity_available_g: e.target.value })}
-            className="flex-1 rounded border border-teal text-sm px-2 py-1 text-teal"
-          />
+          <select
+            value={newUnit}
+            onChange={(e) => setNewUnit(e.target.value)}
+            className="w-16 rounded border border-teal text-sm px-1 py-1 text-teal bg-white"
+          >
+            {UNITS.map((u) => (
+              <option key={u.value} value={u.value}>{u.label}</option>
+            ))}
+          </select>
         </div>
 
         <button
@@ -262,96 +296,142 @@ export default function FeedingPlan() {
         {components.length === 0 ? (
           <p className="text-sm text-teal/60 italic">Noch keine Komponenten hinzugefügt</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {components.map((component) => (
-              <div key={component.id} className="border border-teal/20 rounded p-3 bg-white">
-                {editing === component.id ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editValues.name}
-                      disabled
-                      className="w-full rounded border border-teal/50 bg-gray-100 px-2 py-1 text-xs text-teal"
-                    />
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <label className="text-xs text-teal/60 block mb-1">pro Mahlzeit (g)</label>
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {components.map((component) => {
+              const unit = component.unit || 'g'
+              const remaining = getRemaining(component, mealsPerDay)
+              const daysLeft = getDaysRemaining(remaining, component, mealsPerDay)
+
+              return (
+                <div key={component.id} className="border border-teal/20 rounded p-3 bg-white">
+                  {editing === component.id ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-teal">{component.name}</p>
+                      <div>
+                        <label className="text-xs text-teal/60 block mb-1">pro Mahlzeit ({unit})</label>
                         <input
                           type="number"
                           value={editValues.quantity_g}
                           onChange={(e) =>
-                            setEditValues({ ...editValues, quantity_g: parseInt(e.target.value) })
+                            setEditValues({ ...editValues, quantity_g: parseFloat(e.target.value) })
                           }
                           className="w-full rounded border border-teal text-sm px-2 py-1 text-teal"
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="text-xs text-teal/60 block mb-1">Verfügbar (g)</label>
+                      <div>
+                        <label className="text-xs text-teal/60 block mb-1">Notizen</label>
                         <input
-                          type="number"
-                          value={editValues.quantity_available_g}
-                          onChange={(e) =>
-                            setEditValues({ ...editValues, quantity_available_g: parseInt(e.target.value) })
-                          }
+                          type="text"
+                          value={editValues.notes}
+                          onChange={(e) => setEditValues({ ...editValues, notes: e.target.value })}
                           className="w-full rounded border border-teal text-sm px-2 py-1 text-teal"
                         />
                       </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSave(component.id)}
+                          className="flex-1 rounded bg-teal py-1 text-xs font-medium text-paper hover:bg-teal/90 transition"
+                        >
+                          Speichern
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="flex-1 rounded bg-gray-200 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleSave(component.id)}
-                        className="flex-1 rounded bg-teal py-1 text-xs font-medium text-paper hover:bg-teal/90 transition"
-                      >
-                        Speichern
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="flex-1 rounded bg-gray-200 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
-                      >
-                        Abbrechen
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-3">
-                    {/* Product thumbnail */}
-                    {component.food_products?.photo_front_url && (
-                      <img
-                        src={component.food_products.photo_front_url}
-                        alt=""
-                        className="h-12 w-12 rounded border border-teal/20 object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-teal">{component.name}</p>
-                      <p className="text-xs text-teal/60">
-                        <strong>{component.quantity_g}g</strong> pro Mahlzeit
-                      </p>
-                      <p className="text-xs text-chestnut">
-                        Verfügbar: <strong>{component.quantity_available_g}g</strong>
-                      </p>
-                      {component.notes && (
-                        <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        {component.food_products?.photo_front_url && (
+                          <img
+                            src={component.food_products.photo_front_url}
+                            alt=""
+                            className="h-12 w-12 rounded border border-teal/20 object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-teal">{component.name}</p>
+                          <p className="text-xs text-teal/60">
+                            <strong>{formatUnit(component.quantity_g, unit)}</strong> pro Mahlzeit
+                          </p>
+
+                          {remaining != null ? (
+                            <p className={`text-xs mt-0.5 ${daysLeft <= 7 ? 'text-red-600 font-medium' : daysLeft <= 14 ? 'text-amber-600' : 'text-teal/60'}`}>
+                              Vorrat: ~{Math.round(remaining)}{unit}
+                              {daysLeft != null && daysLeft !== Infinity && ` (noch ~${daysLeft} Tage)`}
+                              {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-teal/40 mt-0.5 italic">Keine Inventur</p>
+                          )}
+
+                          {component.inventory_date && (
+                            <p className="text-[10px] text-teal/40">
+                              Inventur: {formatDateDE(component.inventory_date)}
+                            </p>
+                          )}
+
+                          {component.notes && (
+                            <p className="text-xs text-teal/50 mt-1 italic">{component.notes}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            onClick={() => handleEdit(component)}
+                            className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => handleDelete(component.id)}
+                            className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Inventory */}
+                      {inventoryId === component.id ? (
+                        <div className="flex gap-2 mt-2 pt-2 border-t border-teal/10">
+                          <input
+                            type="number"
+                            placeholder={`Aktueller Vorrat (${unit})`}
+                            value={inventoryAmount}
+                            onChange={(e) => setInventoryAmount(e.target.value)}
+                            className="flex-1 rounded border border-teal text-sm px-2 py-1 text-teal"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleInventory(component.id)}
+                            disabled={saving}
+                            className="rounded bg-teal px-3 py-1 text-xs font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => { setInventoryId(null); setInventoryAmount('') }}
+                            className="rounded bg-gray-200 px-3 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setInventoryId(component.id); setInventoryAmount('') }}
+                          className="mt-2 w-full rounded border border-teal/20 py-1 text-xs font-medium text-teal/60 hover:bg-teal/5 hover:text-teal transition"
+                        >
+                          📋 Inventur
+                        </button>
                       )}
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        onClick={() => handleEdit(component)}
-                        className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        onClick={() => handleDelete(component.id)}
-                        className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

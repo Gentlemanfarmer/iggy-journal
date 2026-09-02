@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categoryColors } from '../lib/categories'
 import { formatDateDE } from '../lib/dates'
+import { getRemaining, getDaysRemaining, getMealsPerDay } from '../lib/feeding'
 import { useRefresh } from '../context/RefreshContext'
 import QuickEntryModal from './QuickEntryModal'
 
 function DueOverviewComponent() {
   const [rules, setRules] = useState([])
   const [lastEntries, setLastEntries] = useState({})
+  const [lowStockItems, setLowStockItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedRule, setSelectedRule] = useState(null)
   const { refreshKey } = useRefresh()
@@ -22,7 +24,6 @@ function DueOverviewComponent() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      // Fetch user's custom rules
       const { data: rulesData, error: rulesError } = await supabase
         .from('user_rules')
         .select('*')
@@ -33,7 +34,6 @@ function DueOverviewComponent() {
       if (rulesError) throw rulesError
       setRules(rulesData || [])
 
-      // Fetch last entry for each rule
       const lastEntriesMap = {}
       for (const rule of rulesData || []) {
         const { data, error } = await supabase
@@ -50,6 +50,22 @@ function DueOverviewComponent() {
         }
       }
       setLastEntries(lastEntriesMap)
+
+      const { data: compData } = await supabase
+        .from('feeding_components')
+        .select('*')
+        .eq('user_id', session.user.id)
+      const mealsPerDay = getMealsPerDay()
+      const stockWarnings = (compData || [])
+        .filter((c) => c.inventory_date && c.quantity_available_g != null)
+        .map((c) => {
+          const remaining = getRemaining(c, mealsPerDay)
+          const daysLeft = getDaysRemaining(remaining, c, mealsPerDay)
+          return { ...c, remaining, daysLeft }
+        })
+        .filter((item) => item.daysLeft != null && item.daysLeft <= 14)
+        .sort((a, b) => a.daysLeft - b.daysLeft)
+      setLowStockItems(stockWarnings)
     } catch (err) {
       console.error(err)
     } finally {
@@ -85,6 +101,35 @@ function DueOverviewComponent() {
   return (
     <>
       <div className="space-y-4">
+        {/* Low Stock Warnings */}
+        {lowStockItems.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-teal">Futtervorrat</p>
+            {lowStockItems.map((item) => {
+              const unit = item.unit || 'g'
+              const isUrgent = item.daysLeft <= 7
+              return (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between rounded border-2 p-3 ${
+                    isUrgent ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'
+                  }`}
+                >
+                  <div>
+                    <p className={`text-sm font-medium ${isUrgent ? 'text-red-600' : 'text-amber-700'}`}>
+                      {item.name} nachbestellen
+                    </p>
+                    <p className="text-xs text-teal/60">
+                      Noch ~{Math.round(item.remaining)}{unit} (~{item.daysLeft} Tage)
+                    </p>
+                  </div>
+                  <span className="text-lg">{isUrgent ? '🚨' : '⚠️'}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
         <p className="text-sm text-teal/60">Pflege-Fälligkeiten basierend auf den letzten Einträgen:</p>
         <div className="space-y-3">
           {rules.map((rule) => {

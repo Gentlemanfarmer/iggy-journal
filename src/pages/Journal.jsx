@@ -15,7 +15,7 @@ import Footer from '../components/Footer'
 
 const MORE_ITEMS = [
   { key: 'wissen', label: 'Wissen' },
-  { key: 'bibliothek', label: 'Bibliothek' },
+  { key: 'bibliothek', label: 'Futterbibliothek' },
   { key: 'futter', label: 'Futter' },
   { key: 'verlauf', label: 'Verlauf' },
   { key: 'einstellungen', label: 'Einstellungen' },
