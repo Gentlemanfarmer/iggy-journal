@@ -34,20 +34,19 @@ function DueOverviewComponent() {
       if (rulesError) throw rulesError
       setRules(rulesData || [])
 
-      const lastEntriesMap = {}
-      for (const rule of rulesData || []) {
-        const { data, error } = await supabase
-          .from('entries')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .eq('category', rule.category)
-          .eq('subtype', rule.subtype)
-          .order('date', { ascending: false })
-          .limit(1)
+      const categories = [...new Set((rulesData || []).map((r) => r.category))]
+      const { data: allEntries, error: entriesError } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .in('category', categories)
+        .order('date', { ascending: false })
+      if (entriesError) throw entriesError
 
-        if (!error && data?.length > 0) {
-          lastEntriesMap[`${rule.category}-${rule.subtype}`] = data[0]
-        }
+      const lastEntriesMap = {}
+      for (const entry of allEntries || []) {
+        const key = `${entry.category}-${entry.subtype}`
+        if (!lastEntriesMap[key]) lastEntriesMap[key] = entry
       }
       setLastEntries(lastEntriesMap)
 
