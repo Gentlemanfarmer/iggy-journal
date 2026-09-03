@@ -210,7 +210,11 @@ export default function FeedingPlan() {
               value={selectedProductId}
               onChange={(e) => {
                 setSelectedProductId(e.target.value)
-                if (e.target.value !== 'manual') setManualName('')
+                if (e.target.value !== 'manual') {
+                  setManualName('')
+                  const prod = libraryProducts.find((p) => p.id === parseInt(e.target.value))
+                  if (prod?.stock_unit) setNewUnit(prod.stock_unit)
+                }
               }}
               className="w-full rounded border border-teal text-sm px-2 py-1.5 text-teal bg-white"
             >

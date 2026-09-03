@@ -255,6 +255,9 @@ export default function FoodLibrary() {
             const remaining = getProductRemaining(p, linked, mealsPerDay)
             const daysLeft = getProductDaysRemaining(remaining, p, linked, mealsPerDay)
             const stockUnit = p.stock_unit || 'g'
+            const mismatchedUnits = p.inventory_date
+              ? linked.filter((c) => (c.unit || 'g') !== stockUnit)
+              : []
 
             return (
               <div key={p.id} className="rounded border border-teal/20 bg-white p-3">
@@ -295,6 +298,11 @@ export default function FoodLibrary() {
                   ) : null}
                   {p.inventory_date && (
                     <p className="text-[10px] text-teal/40">Inventur: {formatDateDE(p.inventory_date)}</p>
+                  )}
+                  {mismatchedUnits.length > 0 && (
+                    <p className="text-[10px] text-amber-600">
+                      Einheit im Futterplan ({mismatchedUnits.map((c) => c.unit).join(', ')}) weicht von Inventur ({stockUnit}) ab
+                    </p>
                   )}
                 </div>
 
