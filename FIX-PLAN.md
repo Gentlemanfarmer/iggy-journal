@@ -60,8 +60,8 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 - [x] **5.1** Kontrast: `text-teal/40` bei 10 px anheben; Fokus-Styles an Buttons.
 - [x] **5.2** `aria-label` an Icon-Buttons (✎ ✕ ✓ 🔗 …).
 - [x] **5.3** QuickAdd „Speichern & weiter"; Gewicht-Shortcut (Subtyp-Skip).
-- [ ] **5.4** Löschen: optimistisch + Undo-Toast statt `confirm()`.
-- [ ] **5.5** KB-Suche modulübergreifend.
+- [x] **5.4** Löschen: optimistisch + Undo-Toast statt `confirm()`.
+- [x] **5.5** KB-Suche modulübergreifend.
 - [ ] **5.6** Kleinigkeiten: Toast-`id` als Counter/UUID, `animate-pulse` weg, Modal `w-full max-w-96`.
 
 ## Phase 6 — Optional / später 🟢
