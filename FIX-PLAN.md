@@ -50,9 +50,9 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 - [x] **3.3 Init-Regeln** an Login/DB-Trigger hängen statt nur an RulesEditor-Mount.
 
 ## Phase 4 — Inhalt / Fachlich 🟠🟡  *(risikolos, jederzeit)*
-- [ ] **4.1** Entwurmungs-Intervall welpengerecht (nicht 90 Tage im 1. Halbjahr).
-- [ ] **4.2** `[Einzutragen]`-Platzhalter füllen (Futter, Medizin) oder ausblenden.
-- [ ] **4.3** „Ohrenpflege" von Training → Pflege/Medizin umsortieren.
+- [x] **4.1** Entwurmungs-Intervall welpengerecht (nicht 90 Tage im 1. Halbjahr).
+- [x] **4.2** `[Einzutragen]`-Platzhalter füllen (Futter, Medizin) oder ausblenden.
+- [x] **4.3** „Ohrenpflege" von Training → Pflege/Medizin umsortieren.
 - [ ] **4.4** (optional) Modul „Genetik/Erbgesundheit" (LGT1, NAD, Speicherkrankheit, HD).
 - [ ] **4.5** (Entscheidung) „Schnauzgriff" vs. eigene PR-Philosophie.
 
