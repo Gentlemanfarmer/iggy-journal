@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../context/ToastContext'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { formatDateDE, todayLocal } from '../lib/dates'
 import { getProductRemaining, getProductDaysRemaining, getMealsPerDay, formatUnit } from '../lib/feeding'
@@ -25,6 +26,9 @@ export default function FoodLibrary() {
   const [inventoryAmount, setInventoryAmount] = useState('')
   const [inventoryUnit, setInventoryUnit] = useState('g')
   const { execute, loading: saving } = useAsyncWithToast()
+  const { addToast } = useToast()
+  const [hiddenIds, setHiddenIds] = useState(new Set())
+  const pendingRef = useRef({})
 
   const mealsPerDay = getMealsPerDay()
 
@@ -116,16 +120,31 @@ export default function FoodLibrary() {
     )
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Produkt wirklich löschen?')) return
-    await execute(
-      async () => {
+  const handleDelete = (id) => {
+    setHiddenIds((prev) => new Set([...prev, id]))
+
+    const timeout = setTimeout(async () => {
+      delete pendingRef.current[id]
+      try {
         const { error } = await supabase.from('food_products').delete().eq('id', id)
         if (error) throw error
         await fetchProducts()
+      } catch (err) {
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+        addToast(`Fehler: ${err.message}`, 'error')
+      }
+    }, 5000)
+
+    pendingRef.current[id] = timeout
+
+    addToast('Produkt gelöscht', 'info', 5000, {
+      label: 'Rückgängig',
+      onAction: () => {
+        clearTimeout(pendingRef.current[id])
+        delete pendingRef.current[id]
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
       },
-      { successMsg: 'Produkt gelöscht' },
-    )
+    })
   }
 
   const handleInventory = async (productId) => {
@@ -250,7 +269,7 @@ export default function FoodLibrary() {
         <p className="text-sm text-teal/60 italic">Noch keine Produkte in der Bibliothek</p>
       ) : (
         <div className="space-y-2">
-          {products.map((p) => {
+          {products.filter((p) => !hiddenIds.has(p.id)).map((p) => {
             const linked = getLinkedComponents(p.id)
             const remaining = getProductRemaining(p, linked, mealsPerDay)
             const daysLeft = getProductDaysRemaining(remaining, p, linked, mealsPerDay)
@@ -272,12 +291,14 @@ export default function FoodLibrary() {
                   <div className="flex gap-1">
                     <button
                       onClick={() => startEdit(p)}
+                      aria-label="Bearbeiten"
                       className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
                     >
                       ✎
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
+                      aria-label="Löschen"
                       className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
                     >
                       ✕
@@ -294,10 +315,10 @@ export default function FoodLibrary() {
                       {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
                     </p>
                   ) : linked.length > 0 ? (
-                    <p className="text-xs text-teal/40 italic">Keine Inventur</p>
+                    <p className="text-xs text-teal/60 italic">Keine Inventur</p>
                   ) : null}
                   {p.inventory_date && (
-                    <p className="text-[10px] text-teal/40">Inventur: {formatDateDE(p.inventory_date)}</p>
+                    <p className="text-[10px] text-teal/60">Inventur: {formatDateDE(p.inventory_date)}</p>
                   )}
                   {mismatchedUnits.length > 0 && (
                     <p className="text-[10px] text-amber-600">
@@ -335,6 +356,7 @@ export default function FoodLibrary() {
                     </button>
                     <button
                       onClick={() => { setInventoryId(null); setInventoryAmount(''); setInventoryUnit('g') }}
+                      aria-label="Abbrechen"
                       className="rounded bg-gray-200 px-3 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
                     >
                       ✕
@@ -381,13 +403,13 @@ export default function FoodLibrary() {
                         {p.photo_front_url && (
                           <button onClick={() => setZoomImg(p.photo_front_url)} className="w-full text-left">
                             <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
+                            <p className="text-[10px] text-teal/60 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
                           </button>
                         )}
                         {p.photo_back_url && (
                           <button onClick={() => setZoomImg(p.photo_back_url)} className="w-full text-left">
                             <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
+                            <p className="text-[10px] text-teal/60 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
                           </button>
                         )}
                       </div>
@@ -409,7 +431,7 @@ export default function FoodLibrary() {
                       <p className="text-xs text-teal/60 whitespace-pre-wrap">{p.notes}</p>
                     )}
                     {!p.photo_front_url && !p.photo_back_url && !p.notes && linked.length === 0 && (
-                      <p className="text-xs text-teal/40 italic">Keine Details hinterlegt</p>
+                      <p className="text-xs text-teal/60 italic">Keine Details hinterlegt</p>
                     )}
                   </div>
                 )}
@@ -425,6 +447,7 @@ export default function FoodLibrary() {
         >
           <button
             onClick={() => setZoomImg(null)}
+            aria-label="Schliessen"
             className="absolute top-4 right-4 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-black shadow"
           >
             ✕

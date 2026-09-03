@@ -1,4 +1,5 @@
-import { useState, useMemo, memo } from 'react'
+import { useState, useRef, useMemo, memo } from 'react'
+import { supabase } from '../lib/supabase'
 import { categories, categoryColors, getCategoryLabel } from '../lib/categories'
 import { formatDateSmart } from '../lib/dates'
 import { useFetchEntries } from '../hooks/useFetchEntries'
@@ -8,15 +9,17 @@ import { groupEntriesByDate } from '../utils/memoize'
 function JournalViewComponent() {
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [incidentFilter, setIncidentFilter] = useState(null)
-  const { entries, loading, error, hasMore, loadMore, deleteEntry } = useFetchEntries()
+  const { entries, loading, error, hasMore, loadMore, deleteEntry, fetchEntries } = useFetchEntries()
   const { addToast } = useToast()
+  const [hiddenIds, setHiddenIds] = useState(new Set())
+  const pendingRef = useRef({})
 
   const filteredEntries = useMemo(() => {
-    let filtered = entries
+    let filtered = entries.filter((e) => !hiddenIds.has(e.id))
     if (selectedCategory) filtered = filtered.filter((e) => e.category === selectedCategory)
     if (incidentFilter) filtered = filtered.filter((e) => e.incident_tag === incidentFilter)
     return filtered
-  }, [entries, selectedCategory, incidentFilter])
+  }, [entries, selectedCategory, incidentFilter, hiddenIds])
 
   const groupedEntries = useMemo(
     () => groupEntriesByDate(filteredEntries),
@@ -25,14 +28,29 @@ function JournalViewComponent() {
 
   const sortedDates = Object.keys(groupedEntries).sort().reverse()
 
-  const handleDelete = async (id) => {
-    if (!confirm('Eintrag löschen?')) return
-    try {
-      await deleteEntry(id)
-      addToast('Eintrag gelöscht', 'success')
-    } catch (err) {
-      addToast(`Fehler beim Löschen: ${err.message}`, 'error')
-    }
+  const handleDelete = (id) => {
+    setHiddenIds((prev) => new Set([...prev, id]))
+
+    const timeout = setTimeout(async () => {
+      delete pendingRef.current[id]
+      try {
+        await deleteEntry(id)
+      } catch (err) {
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+        addToast(`Fehler: ${err.message}`, 'error')
+      }
+    }, 5000)
+
+    pendingRef.current[id] = timeout
+
+    addToast('Eintrag gelöscht', 'info', 5000, {
+      label: 'Rückgängig',
+      onAction: () => {
+        clearTimeout(pendingRef.current[id])
+        delete pendingRef.current[id]
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+      },
+    })
   }
 
   const isPdf = (url) => url?.toLowerCase().endsWith('.pdf')
@@ -145,6 +163,7 @@ function JournalViewComponent() {
                     </div>
                     <button
                       onClick={() => handleDelete(entry.id)}
+                      aria-label="Löschen"
                       className="text-xs text-red-600 hover:text-red-800"
                     >
                       ✕

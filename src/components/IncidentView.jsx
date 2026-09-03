@@ -124,7 +124,7 @@ export default function IncidentView() {
                         {entry.subtype}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-teal/40">{formatDateSmart(entry.date)}</p>
+                        <p className="text-xs text-teal/60">{formatDateSmart(entry.date)}</p>
                         {entry.note && <p className="text-sm text-teal">{entry.note}</p>}
                         {entry.value != null && (
                           <p className="text-xs text-chestnut">

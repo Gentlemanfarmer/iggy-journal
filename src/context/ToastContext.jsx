@@ -1,17 +1,21 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useRef } from 'react'
 
 const ToastContext = createContext()
 
+let nextId = 1
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
+  const timersRef = useRef({})
 
-  const addToast = useCallback((message, type = 'info', duration = 3000) => {
-    const id = Date.now()
-    setToasts((prev) => [...prev, { id, message, type }])
+  const addToast = useCallback((message, type = 'info', duration = 3000, action = null) => {
+    const id = nextId++
+    setToasts((prev) => [...prev, { id, message, type, action }])
 
     if (duration > 0) {
-      setTimeout(() => {
+      timersRef.current[id] = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
+        delete timersRef.current[id]
       }, duration)
     }
 
@@ -20,6 +24,10 @@ export function ToastProvider({ children }) {
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
+    if (timersRef.current[id]) {
+      clearTimeout(timersRef.current[id])
+      delete timersRef.current[id]
+    }
   }, [])
 
   return (
@@ -62,19 +70,30 @@ function Toast({ toast, onRemove }) {
   }[toast.type] || '💬'
 
   return (
-    <div className={`rounded border ${bgColor} p-3 shadow-lg animate-pulse`}>
+    <div className={`rounded border ${bgColor} p-3 shadow-lg`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <p className="text-sm font-medium">
             {icon} {toast.message}
           </p>
         </div>
-        <button
-          onClick={onRemove}
-          className="text-xs opacity-60 hover:opacity-100 transition"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-1">
+          {toast.action && (
+            <button
+              onClick={() => { toast.action.onAction(); onRemove() }}
+              className="text-xs font-bold underline hover:no-underline transition"
+            >
+              {toast.action.label}
+            </button>
+          )}
+          <button
+            onClick={onRemove}
+            aria-label="Schliessen"
+            className="text-xs opacity-60 hover:opacity-100 transition"
+          >
+            ✕
+          </button>
+        </div>
       </div>
     </div>
   )

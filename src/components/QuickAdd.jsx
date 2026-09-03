@@ -35,7 +35,36 @@ export default function QuickAdd({ onEntryAdded }) {
 
   const handleSelectCategory = (cat) => {
     setSelectedCategory(cat)
-    setStep(1)
+    const subtypes = categories[cat]
+    if (subtypes.length === 1) {
+      handleSelectSubtypeDirect(cat, subtypes[0])
+    } else {
+      setStep(1)
+    }
+  }
+
+  const handleSelectSubtypeDirect = async (cat, subtype) => {
+    setSelectedCategory(cat)
+    setSelectedSubtype(subtype)
+    setStep(2)
+    setDependencies([])
+    setSelectedDeps({})
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return
+
+    const rule = await getRule(session.user.id, cat, subtype)
+    if (!rule) return
+
+    const deps = await getDependencies(session.user.id, rule.id)
+    if (deps.length > 0) {
+      setDependencies(deps)
+      const initial = {}
+      deps.forEach((dep) => {
+        initial[dep.dependent_rule_id] = true
+      })
+      setSelectedDeps(initial)
+    }
   }
 
   const handleSelectSubtype = async (subtype) => {
@@ -71,7 +100,7 @@ export default function QuickAdd({ onEntryAdded }) {
     return data.publicUrl
   }
 
-  const handleSave = async () => {
+  const handleSave = async (continueAfterSave = false) => {
     if (!selectedCategory || !selectedSubtype) return
     if (selectedCategory === 'Gewicht' && !value) return
 
@@ -107,10 +136,20 @@ export default function QuickAdd({ onEntryAdded }) {
           if (depError) throw depError
         }
 
-        resetForm()
+        if (continueAfterSave) {
+          setDate(todayLocal())
+          setNote('')
+          setValue('')
+          setFile(null)
+          setIncidentTag('')
+          setDependencies([])
+          setSelectedDeps({})
+        } else {
+          resetForm()
+        }
         onEntryAdded()
       },
-      { successMsg: 'Eintrag erstellt' },
+      { successMsg: continueAfterSave ? 'Gespeichert — weiter' : 'Eintrag erstellt' },
     )
   }
 
@@ -159,7 +198,7 @@ export default function QuickAdd({ onEntryAdded }) {
       {step === 2 && (
         <div className="space-y-3">
           <button
-            onClick={() => setStep(1)}
+            onClick={() => setStep(categories[selectedCategory].length === 1 ? 0 : 1)}
             className="text-xs text-teal/60 hover:text-teal"
           >
             ← Zurück
@@ -253,13 +292,22 @@ export default function QuickAdd({ onEntryAdded }) {
             </div>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving || (selectedCategory === 'Gewicht' && !value)}
-            className="w-full rounded bg-teal py-2 text-sm font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
-          >
-            {saving ? 'Speichert...' : 'Speichern'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSave(false)}
+              disabled={saving || (selectedCategory === 'Gewicht' && !value)}
+              className="flex-1 rounded bg-teal py-2 text-sm font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
+            >
+              {saving ? 'Speichert...' : 'Speichern'}
+            </button>
+            <button
+              onClick={() => handleSave(true)}
+              disabled={saving || (selectedCategory === 'Gewicht' && !value)}
+              className="flex-1 rounded border-2 border-teal py-2 text-sm font-medium text-teal hover:bg-teal hover:text-paper disabled:opacity-50 transition"
+            >
+              Speichern & weiter
+            </button>
+          </div>
         </div>
       )}
     </div>

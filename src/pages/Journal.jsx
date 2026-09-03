@@ -150,7 +150,7 @@ export default function Journal() {
           <button
             onClick={() => switchTab('neu')}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
-              activeTab === 'neu' ? 'text-teal' : 'text-teal/40'
+              activeTab === 'neu' ? 'text-teal' : 'text-teal/50'
             }`}
           >
             <span className="text-xl leading-none">＋</span>
@@ -160,7 +160,7 @@ export default function Journal() {
           <button
             onClick={() => switchTab('fällig')}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
-              activeTab === 'fällig' ? 'text-teal' : 'text-teal/40'
+              activeTab === 'fällig' ? 'text-teal' : 'text-teal/50'
             }`}
           >
             <span className="text-xl leading-none">⏰</span>
@@ -170,7 +170,7 @@ export default function Journal() {
           <button
             onClick={() => switchTab('journal')}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
-              activeTab === 'journal' ? 'text-teal' : 'text-teal/40'
+              activeTab === 'journal' ? 'text-teal' : 'text-teal/50'
             }`}
           >
             <span className="text-xl leading-none">📓</span>
@@ -180,7 +180,7 @@ export default function Journal() {
           <button
             onClick={() => setShowMore(!showMore)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1 transition ${
-              showMore || isMoreTab ? 'text-teal' : 'text-teal/40'
+              showMore || isMoreTab ? 'text-teal' : 'text-teal/50'
             }`}
           >
             <span className="text-xl leading-none">☰</span>

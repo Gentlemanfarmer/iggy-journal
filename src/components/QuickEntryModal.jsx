@@ -105,8 +105,8 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-96 max-h-[80vh] overflow-y-auto rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="w-full max-w-96 max-h-[80vh] overflow-y-auto rounded-lg border border-teal/20 bg-white p-6 shadow-lg">
         <h2 className="mb-4 text-lg font-semibold text-teal">
           {rule.category} - {rule.subtype}
         </h2>

@@ -198,6 +198,7 @@ export default function RulesEditor() {
                       onClick={() =>
                         setManagingDeps(managingDeps === rule.id ? null : rule.id)
                       }
+                      aria-label="Abhängigkeiten verwalten"
                       className={`px-2 py-1 text-xs rounded font-medium transition ${
                         managingDeps === rule.id
                           ? 'bg-chestnut text-paper'
