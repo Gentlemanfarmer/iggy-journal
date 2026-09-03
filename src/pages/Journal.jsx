@@ -34,11 +34,18 @@ export default function Journal() {
   useEffect(() => {
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          setUser(session.user)
+        const { data, error: sessionError } = await supabase.auth.getSession()
+        console.log('getSession result:', { session: data?.session?.user?.email, error: sessionError })
+        if (sessionError) {
+          console.error('Session error:', sessionError)
+          navigate('/login')
+          return
+        }
+        if (data?.session?.user) {
+          setUser(data.session.user)
           supabase.rpc('init_user_rules').catch(() => {})
         } else {
+          console.log('No session, redirecting to login')
           navigate('/login')
         }
       } catch (err) {
