@@ -49,6 +49,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
   }
 
   const handleSubmit = async () => {
+    if (rule.category === 'Gewicht' && !value) return
     await execute(
       async () => {
         const { data: { session } } = await supabase.auth.getSession()
@@ -204,7 +205,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
         <div className="flex gap-2">
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || (rule.category === 'Gewicht' && !value)}
             className="flex-1 rounded bg-teal py-2 text-sm font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
           >
             {loading ? 'Speichert...' : 'Erledigt'}

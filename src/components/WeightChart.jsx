@@ -25,10 +25,12 @@ export default function WeightChart() {
         .order('date', { ascending: true })
       if (error) throw error
 
-      const chartData = (entries || []).map((entry) => ({
-        date: entry.date,
-        weight: parseFloat(entry.value),
-      }))
+      const chartData = (entries || [])
+        .map((entry) => ({
+          date: entry.date,
+          weight: parseFloat(entry.value),
+        }))
+        .filter((entry) => !isNaN(entry.weight))
 
       setData(chartData)
     } catch (err) {

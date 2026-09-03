@@ -73,6 +73,7 @@ export default function QuickAdd({ onEntryAdded }) {
 
   const handleSave = async () => {
     if (!selectedCategory || !selectedSubtype) return
+    if (selectedCategory === 'Gewicht' && !value) return
 
     await execute(
       async () => {
@@ -254,7 +255,7 @@ export default function QuickAdd({ onEntryAdded }) {
 
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || (selectedCategory === 'Gewicht' && !value)}
             className="w-full rounded bg-teal py-2 text-sm font-medium text-paper hover:bg-teal/90 disabled:opacity-50 transition"
           >
             {saving ? 'Speichert...' : 'Speichern'}
