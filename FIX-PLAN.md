@@ -41,7 +41,7 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 - [x] **2.1 `todayLocal()`-Helper** in `lib/dates.js`, dann ersetzen in:
       QuickAdd, QuickEntryModal, FoodLibrary (inventory_date), ExportData.
 - [x] **2.2 `highlightText`** (KnowledgeBase): Suchterm escapen **und** `/g`+`.test()`-Bug fixen.
-- [ ] **2.3 Gewicht-Validierung:** `value` bei Kategorie „Gewicht" Pflicht; im Chart `NaN` filtern.
+- [x] **2.3 Gewicht-Validierung:** `value` bei Kategorie „Gewicht" Pflicht; im Chart `NaN` filtern.
 - [ ] **2.4 Toten Code entfernen:** `useQueryCache.js` + `calculateDailyTotal` (oder N+1 damit lösen).
 
 ## Phase 3 — Datenmodell & Performance 🟠
