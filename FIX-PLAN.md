@@ -47,7 +47,7 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 ## Phase 3 — Datenmodell & Performance 🟠
 - [x] **3.1 DueOverview N+1** → ein Query über alle `(category, subtype)`, im Client gruppieren.
 - [x] **3.2 Vorratsmodell / Einheiten:** gemischte g ↔ TL/EL pro Produkt verhindern oder kennzeichnen.
-- [ ] **3.3 Init-Regeln** an Login/DB-Trigger hängen statt nur an RulesEditor-Mount.
+- [x] **3.3 Init-Regeln** an Login/DB-Trigger hängen statt nur an RulesEditor-Mount.
 
 ## Phase 4 — Inhalt / Fachlich 🟠🟡  *(risikolos, jederzeit)*
 - [ ] **4.1** Entwurmungs-Intervall welpengerecht (nicht 90 Tage im 1. Halbjahr).
