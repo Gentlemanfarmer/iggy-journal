@@ -26,6 +26,7 @@ const MORE_ITEMS = [
 export default function Journal() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [debugMsg, setDebugMsg] = useState('')
   const [activeTab, setActiveTab] = useState('neu')
   const [refreshKey, setRefreshKey] = useState(0)
   const [showMore, setShowMore] = useState(false)
@@ -34,23 +35,21 @@ export default function Journal() {
   useEffect(() => {
     const getSession = async () => {
       try {
+        setDebugMsg('Prüfe Session...')
         const { data, error: sessionError } = await supabase.auth.getSession()
-        console.log('getSession result:', { session: data?.session?.user?.email, error: sessionError })
         if (sessionError) {
-          console.error('Session error:', sessionError)
-          navigate('/login')
+          setDebugMsg(`Session-Fehler: ${sessionError.message}`)
           return
         }
         if (data?.session?.user) {
           setUser(data.session.user)
           supabase.rpc('init_user_rules').catch(() => {})
         } else {
-          console.log('No session, redirecting to login')
+          setDebugMsg('Keine Session gefunden')
           navigate('/login')
         }
       } catch (err) {
-        console.error('Session check failed:', err)
-        navigate('/login')
+        setDebugMsg(`Exception: ${err.message}`)
       } finally {
         setLoading(false)
       }
@@ -86,8 +85,13 @@ export default function Journal() {
 
   const isMoreTab = MORE_ITEMS.some((i) => i.key === activeTab)
 
-  if (loading) {
-    return <div className="flex min-h-svh items-center justify-center bg-paper text-teal">Lädt...</div>
+  if (loading || debugMsg) {
+    return (
+      <div className="flex min-h-svh flex-col items-center justify-center bg-paper text-teal gap-2">
+        <p>Lädt...</p>
+        {debugMsg && <p className="text-xs text-chestnut">{debugMsg}</p>}
+      </div>
+    )
   }
 
   return (
