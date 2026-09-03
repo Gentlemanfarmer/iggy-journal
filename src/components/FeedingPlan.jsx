@@ -359,7 +359,7 @@ export default function FeedingPlan() {
                             {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
                           </p>
                         ) : product ? (
-                          <p className="text-xs text-teal/40 mt-0.5 italic">Keine Inventur</p>
+                          <p className="text-xs text-teal/60 mt-0.5 italic">Keine Inventur</p>
                         ) : null}
 
                         {component.notes && (

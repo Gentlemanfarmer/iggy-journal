@@ -294,10 +294,10 @@ export default function FoodLibrary() {
                       {daysLeft != null && daysLeft <= 7 && ' ⚠️'}
                     </p>
                   ) : linked.length > 0 ? (
-                    <p className="text-xs text-teal/40 italic">Keine Inventur</p>
+                    <p className="text-xs text-teal/60 italic">Keine Inventur</p>
                   ) : null}
                   {p.inventory_date && (
-                    <p className="text-[10px] text-teal/40">Inventur: {formatDateDE(p.inventory_date)}</p>
+                    <p className="text-[10px] text-teal/60">Inventur: {formatDateDE(p.inventory_date)}</p>
                   )}
                   {mismatchedUnits.length > 0 && (
                     <p className="text-[10px] text-amber-600">
@@ -381,13 +381,13 @@ export default function FoodLibrary() {
                         {p.photo_front_url && (
                           <button onClick={() => setZoomImg(p.photo_front_url)} className="w-full text-left">
                             <img src={p.photo_front_url} alt="Vorderseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
+                            <p className="text-[10px] text-teal/60 text-center mt-1">Vorderseite — antippen zum Vergrössern</p>
                           </button>
                         )}
                         {p.photo_back_url && (
                           <button onClick={() => setZoomImg(p.photo_back_url)} className="w-full text-left">
                             <img src={p.photo_back_url} alt="Rückseite" className="w-full rounded border border-teal/20" />
-                            <p className="text-[10px] text-teal/40 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
+                            <p className="text-[10px] text-teal/60 text-center mt-1">Rückseite — antippen zum Vergrössern</p>
                           </button>
                         )}
                       </div>
@@ -409,7 +409,7 @@ export default function FoodLibrary() {
                       <p className="text-xs text-teal/60 whitespace-pre-wrap">{p.notes}</p>
                     )}
                     {!p.photo_front_url && !p.photo_back_url && !p.notes && linked.length === 0 && (
-                      <p className="text-xs text-teal/40 italic">Keine Details hinterlegt</p>
+                      <p className="text-xs text-teal/60 italic">Keine Details hinterlegt</p>
                     )}
                   </div>
                 )}

@@ -69,7 +69,7 @@ export default function AktivDogRechner({ lastWeight, feedingComponents }) {
         className="w-full flex items-center justify-between p-3 text-left"
       >
         <p className="text-sm font-semibold text-teal">AktivDog Empfehlung</p>
-        <span className="text-xs text-teal/40">{open ? '▲' : '▼'}</span>
+        <span className="text-xs text-teal/60">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
@@ -103,13 +103,13 @@ export default function AktivDogRechner({ lastWeight, feedingComponents }) {
                     <p className={`text-sm ${isActive ? 'font-medium text-teal' : 'text-teal/70'}`}>
                       {meta.label}
                     </p>
-                    <p className="text-[10px] text-teal/40">{meta.energieKcalKg} kcal/kg</p>
+                    <p className="text-[10px] text-teal/60">{meta.energieKcalKg} kcal/kg</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
                     <p className={`text-sm font-bold ${isActive ? 'text-teal' : 'text-teal/60'}`}>
-                      {adjusted}g<span className="font-normal text-[10px] text-teal/40">/Tag</span>
+                      {adjusted}g<span className="font-normal text-[10px] text-teal/60">/Tag</span>
                     </p>
-                    <p className="text-[10px] text-teal/40">{perMeal}g/Mahlzeit</p>
+                    <p className="text-[10px] text-teal/60">{perMeal}g/Mahlzeit</p>
                   </div>
                 </div>
               )
@@ -133,7 +133,7 @@ export default function AktivDogRechner({ lastWeight, feedingComponents }) {
               onChange={(e) => setAdjustment(parseInt(e.target.value))}
               className="w-full accent-teal"
             />
-            <div className="flex justify-between text-[10px] text-teal/40">
+            <div className="flex justify-between text-[10px] text-teal/60">
               <span>dünn (−15%)</span>
               <span>ideal</span>
               <span>rund (+15%)</span>
@@ -141,7 +141,7 @@ export default function AktivDogRechner({ lastWeight, feedingComponents }) {
           </div>
 
           {/* Disclaimer */}
-          <p className="text-[10px] text-teal/40 leading-relaxed">
+          <p className="text-[10px] text-teal/60 leading-relaxed">
             Richtwert (AktivDog, Profil: intakt · ideal · Familienhund).
             Leckerli und Kauartikel von der Tagesmenge abziehen.
             An Iggys Kondition anpassen (Rippen tastbar, Taille von oben sichtbar).
