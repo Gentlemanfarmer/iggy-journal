@@ -13,13 +13,16 @@ export default function WeightChart() {
   const fetchWeights = async () => {
     setLoading(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+
       const { data: entries, error } = await supabase
         .from('entries')
         .select('date, value')
+        .eq('user_id', session.user.id)
         .eq('category', 'Gewicht')
         .eq('subtype', 'Gewogen')
         .order('date', { ascending: true })
-
       if (error) throw error
 
       const chartData = (entries || []).map((entry) => ({
