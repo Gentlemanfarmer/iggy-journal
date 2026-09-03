@@ -42,7 +42,7 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
       QuickAdd, QuickEntryModal, FoodLibrary (inventory_date), ExportData.
 - [x] **2.2 `highlightText`** (KnowledgeBase): Suchterm escapen **und** `/g`+`.test()`-Bug fixen.
 - [x] **2.3 Gewicht-Validierung:** `value` bei Kategorie „Gewicht" Pflicht; im Chart `NaN` filtern.
-- [ ] **2.4 Toten Code entfernen:** `useQueryCache.js` + `calculateDailyTotal` (oder N+1 damit lösen).
+- [x] **2.4 Toten Code entfernen:** ~~`useQueryCache.js`~~ (aktiv in JournalView) + `calculateDailyTotal` entfernt.
 
 ## Phase 3 — Datenmodell & Performance 🟠
 - [ ] **3.1 DueOverview N+1** → ein Query über alle `(category, subtype)`, im Client gruppieren.
