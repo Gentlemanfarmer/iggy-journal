@@ -48,6 +48,11 @@ export const knowledge = {
         keywords: ['regel', 'sauber', 'trocken', 'gebürstet', 'ölen', 'haut', 'session', 'regelmäßig'],
         content: 'Sauber/trocken/gebürstet; ölen; nie unter 6 mm; Haut straffen; kurze Sessions; Winter föhnen; regelmäßig bürsten; Zwischenpflege; Ohren nach Bedarf.',
       },
+      {
+        heading: 'Ohrenpflege (kanonisch)',
+        keywords: ['ohr', 'ohren', 'kontrolle', 'trocken', 'haare', 'schere', 'trimmer', 'reinigung', 'ph', 'wattestäbchen', 'kin', 'rötung', 'geruch'],
+        content: 'Wöchentliche Kontrolle. Trocken halten nach Bad/Schwimmen. Haare: Schere/Trimmer, nicht routinemäßig zupfen. Reinigung: pH-neutral, kein Wattestäbchen. Ablauf über Kin + Dauerfüttern. Tierarzt bei Rötung/Geruch/Schütteln.',
+      },
     ],
   },
   training: {
@@ -79,11 +84,6 @@ export const knowledge = {
         keywords: ['leine', 'ruhe', 'locker', 'stramm', 'richtungswechsel', 'blickkontakt', 'lob'],
         content: 'Leine = Ruhe. Binärsprache (locker/stramm). Kommentarloser Richtungswechsel. Volle Leinenlänge. Lob bei freiwilligem Blickkontakt.',
       },
-      {
-        heading: 'Ohrenpflege (kanonisch)',
-        keywords: ['ohr', 'ohren', 'kontrolle', 'trocken', 'haare', 'schere', 'trimmer', 'reinigung', 'ph', 'wattestäbchen', 'kin', 'rötung', 'geruch'],
-        content: 'Wöchentliche Kontrolle. Trocken halten nach Bad/Schwimmen. Haare: Schere/Trimmer, nicht routinemäßig zupfen. Reinigung: pH-neutral, kein Wattestäbchen. Ablauf über Kin + Dauerfüttern. Tierarzt bei Rötung/Geruch/Schütteln.',
-      },
     ],
   },
   futter: {
@@ -93,22 +93,22 @@ export const knowledge = {
       {
         heading: 'Futtersorte',
         keywords: ['marke', 'sorte', 'typ'],
-        content: '[Einzutragen: Futtersorte aus Züchterin/Tierarzt-Angaben]',
+        content: 'AktivDog BARF-Menüs (Geflügel, Pferd, Rind, Truthahn, Wildschwein). Siehe Futterbibliothek für aktuelle Produkte und Futterplan für Zusammensetzung.',
       },
       {
         heading: 'Menge nach Gewicht/Alter',
         keywords: ['menge', 'gramm', 'gewicht', 'age', 'größe'],
-        content: '[Einzutragen: Richtwerte je Alter und Gewicht]',
+        content: 'Richtwerte im AktivDog-Rechner (Futterplan). Abhängig von Alter, Gewicht und Sorte. Leckerli und Kauartikel von der Tagesmenge abziehen.',
       },
       {
         heading: 'Mahlzeiten',
         keywords: ['mahlzeiten', 'häufigkeit', 'fütterung', 'welpe', 'mal', 'tag'],
-        content: '[Einzutragen: Welpe meist 3×/Tag, später anpassen]',
+        content: 'Welpe: 3× pro Tag. Ab ca. 6 Monate auf 2× reduzierbar. Einstellung in den Mahlzeiten-pro-Tag im Futterplan.',
       },
       {
         heading: 'Futterwechsel',
         keywords: ['wechsel', 'umstellen', 'anfüttern', 'langsam', 'übergang', 'verdauung'],
-        content: 'Langsam anfüttern [Details einzutragen]',
+        content: 'Neues Futter über 5–7 Tage einschleichen: Tag 1–2 ca. 25% neu, Tag 3–4 ca. 50%, Tag 5–6 ca. 75%, ab Tag 7 komplett. Bei Durchfall langsamer.',
       },
       {
         heading: 'Leckerli',
@@ -129,32 +129,32 @@ export const knowledge = {
       {
         heading: 'Impfungen',
         keywords: ['impfung', 'impfen', 'schutzimpfung', 'grundimmunisierung', 'auffrischung'],
-        content: 'Grundimmunisierung [Daten einzutragen], Auffrischungen [einzutragen]',
+        content: 'Grundimmunisierung: SHP (Staupe, Hepatitis, Parvo) ab 8 Wochen, Wiederholung 12 + 16 Wochen. Tollwut ab 12 Wochen. Auffrischung SHP nach 15 Monaten, dann alle 3 Jahre. Tollwut je nach Kanton/Land. Daten im Impfpass.',
       },
       {
         heading: 'Entwurmung',
-        keywords: ['entwurmung', 'würmer', 'schema', 'intervall', 'alle', 'tage'],
-        content: 'Schema [einzutragen], Richtwert alle 90 Tage',
+        keywords: ['entwurmung', 'würmer', 'schema', 'intervall', 'alle', 'tage', 'welpe'],
+        content: 'Welpen bis 6 Monate: alle 2–4 Wochen (14–28 Tage). Ab 6 Monate: alle 3 Monate (90 Tage) oder nach Kotprobe. Intervall in den Einstellungen anpassen.',
       },
       {
         heading: 'Zeckenschutz',
         keywords: ['zecke', 'zecken', 'schutz', 'präparat', 'mittel', 'intervall'],
-        content: 'Präparat + Intervall [einzutragen]',
+        content: 'Zeckenzeit März–November. Gängige Mittel: Bravecto (alle 12 Wochen), Simparica (monatlich), Seresto-Halsband (8 Monate). Präparat und Intervall individuell mit Tierarzt besprechen.',
       },
       {
         heading: 'Dauermedikation / Allergien',
         keywords: ['allergie', 'medikament', 'dauermedikation', 'chronisch', 'unverträglichkeit'],
-        content: '[Einzutragen: Falls vorhanden]',
+        content: 'Aktuell keine bekannt. Bei Symptomen (Juckreiz, Magen-Darm, Ohrenentzündung) beim Tierarzt abklären und hier nachtragen.',
       },
       {
         heading: 'Tierarzt-Kontakt',
         keywords: ['tierarzt', 'praxis', 'adresse', 'telefon', 'notfall'],
-        content: 'Tierarzt-Praxis: [einzutragen]',
+        content: 'Tierarztpraxis hier eintragen (Name, Adresse, Telefon). Öffnungszeiten notieren.',
       },
       {
         heading: 'Notfall-Nummer',
         keywords: ['notfall', 'notfallklinik', 'nacht', 'wochenende', 'nummer', 'telefon'],
-        content: 'Notfall-Nummer: [einzutragen]',
+        content: 'Notfall-Tierklinik hier eintragen (24h-Nummer). Schweiz: Vergiftungshotline Tox Info Suisse 145.',
       },
     ],
   },
