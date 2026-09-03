@@ -33,9 +33,3 @@ export const groupEntriesByDate = memoize(
   (entries) => entries.map((e) => e.id).join(','),
 )
 
-export const calculateDailyTotal = memoize(
-  (components) => {
-    return components.reduce((sum, c) => sum + (c.quantity_g || 0), 0)
-  },
-  (components) => components.map((c) => c.id).join(','),
-)
