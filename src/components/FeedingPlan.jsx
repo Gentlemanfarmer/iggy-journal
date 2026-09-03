@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../context/ToastContext'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { formatDateDE } from '../lib/dates'
 import { categoryColors } from '../lib/categories'
@@ -26,6 +27,9 @@ export default function FeedingPlan() {
   const [futterEntries, setFutterEntries] = useState([])
   const [mealsPerDay, setMealsPerDay] = useState(getMealsPerDay)
   const { loading: saving, execute } = useAsyncWithToast()
+  const { addToast } = useToast()
+  const [hiddenIds, setHiddenIds] = useState(new Set())
+  const pendingRef = useRef({})
 
   useEffect(() => {
     fetchData()
@@ -138,20 +142,34 @@ export default function FeedingPlan() {
     )
   }
 
-  const handleDelete = async (componentId) => {
-    if (!confirm('Komponente wirklich löschen?')) return
+  const handleDelete = (componentId) => {
+    setHiddenIds((prev) => new Set([...prev, componentId]))
 
-    await execute(
-      async () => {
+    const timeout = setTimeout(async () => {
+      delete pendingRef.current[componentId]
+      try {
         const { error } = await supabase
           .from('feeding_components')
           .delete()
           .eq('id', componentId)
         if (error) throw error
         await fetchData()
+      } catch (err) {
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(componentId); return s })
+        addToast(`Fehler: ${err.message}`, 'error')
+      }
+    }, 5000)
+
+    pendingRef.current[componentId] = timeout
+
+    addToast('Komponente gelöscht', 'info', 5000, {
+      label: 'Rückgängig',
+      onAction: () => {
+        clearTimeout(pendingRef.current[componentId])
+        delete pendingRef.current[componentId]
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(componentId); return s })
       },
-      { successMsg: 'Komponente gelöscht' },
-    )
+    })
   }
 
   const updateMealsPerDay = (val) => {
@@ -281,7 +299,7 @@ export default function FeedingPlan() {
           <p className="text-sm text-teal/60 italic">Noch keine Komponenten hinzugefügt</p>
         ) : (
           <div className="space-y-2 max-h-[600px] overflow-y-auto">
-            {components.map((component) => {
+            {components.filter((c) => !hiddenIds.has(c.id)).map((component) => {
               const unit = component.unit || 'g'
               const product = component.product_id
                 ? libraryProducts.find((p) => p.id === component.product_id)

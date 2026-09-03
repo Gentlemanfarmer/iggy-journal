@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../context/ToastContext'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { formatDateDE, todayLocal } from '../lib/dates'
 import { getProductRemaining, getProductDaysRemaining, getMealsPerDay, formatUnit } from '../lib/feeding'
@@ -25,6 +26,9 @@ export default function FoodLibrary() {
   const [inventoryAmount, setInventoryAmount] = useState('')
   const [inventoryUnit, setInventoryUnit] = useState('g')
   const { execute, loading: saving } = useAsyncWithToast()
+  const { addToast } = useToast()
+  const [hiddenIds, setHiddenIds] = useState(new Set())
+  const pendingRef = useRef({})
 
   const mealsPerDay = getMealsPerDay()
 
@@ -116,16 +120,31 @@ export default function FoodLibrary() {
     )
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Produkt wirklich löschen?')) return
-    await execute(
-      async () => {
+  const handleDelete = (id) => {
+    setHiddenIds((prev) => new Set([...prev, id]))
+
+    const timeout = setTimeout(async () => {
+      delete pendingRef.current[id]
+      try {
         const { error } = await supabase.from('food_products').delete().eq('id', id)
         if (error) throw error
         await fetchProducts()
+      } catch (err) {
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
+        addToast(`Fehler: ${err.message}`, 'error')
+      }
+    }, 5000)
+
+    pendingRef.current[id] = timeout
+
+    addToast('Produkt gelöscht', 'info', 5000, {
+      label: 'Rückgängig',
+      onAction: () => {
+        clearTimeout(pendingRef.current[id])
+        delete pendingRef.current[id]
+        setHiddenIds((prev) => { const s = new Set(prev); s.delete(id); return s })
       },
-      { successMsg: 'Produkt gelöscht' },
-    )
+    })
   }
 
   const handleInventory = async (productId) => {
@@ -250,7 +269,7 @@ export default function FoodLibrary() {
         <p className="text-sm text-teal/60 italic">Noch keine Produkte in der Bibliothek</p>
       ) : (
         <div className="space-y-2">
-          {products.map((p) => {
+          {products.filter((p) => !hiddenIds.has(p.id)).map((p) => {
             const linked = getLinkedComponents(p.id)
             const remaining = getProductRemaining(p, linked, mealsPerDay)
             const daysLeft = getProductDaysRemaining(remaining, p, linked, mealsPerDay)
