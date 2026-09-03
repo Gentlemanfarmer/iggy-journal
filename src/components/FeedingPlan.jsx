@@ -369,12 +369,14 @@ export default function FeedingPlan() {
                       <div className="flex gap-1 flex-shrink-0">
                         <button
                           onClick={() => handleEdit(component)}
+                          aria-label="Bearbeiten"
                           className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
                         >
                           ✎
                         </button>
                         <button
                           onClick={() => handleDelete(component.id)}
+                          aria-label="Löschen"
                           className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
                         >
                           ✕

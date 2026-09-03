@@ -71,6 +71,7 @@ function Toast({ toast, onRemove }) {
         </div>
         <button
           onClick={onRemove}
+          aria-label="Schliessen"
           className="text-xs opacity-60 hover:opacity-100 transition"
         >
           ✕

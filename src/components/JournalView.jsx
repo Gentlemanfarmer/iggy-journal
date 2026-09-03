@@ -145,6 +145,7 @@ function JournalViewComponent() {
                     </div>
                     <button
                       onClick={() => handleDelete(entry.id)}
+                      aria-label="Löschen"
                       className="text-xs text-red-600 hover:text-red-800"
                     >
                       ✕

@@ -272,12 +272,14 @@ export default function FoodLibrary() {
                   <div className="flex gap-1">
                     <button
                       onClick={() => startEdit(p)}
+                      aria-label="Bearbeiten"
                       className="px-2 py-1 text-xs rounded font-medium bg-teal/10 text-teal hover:bg-teal/20 transition"
                     >
                       ✎
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
+                      aria-label="Löschen"
                       className="px-2 py-1 text-xs rounded font-medium bg-red-100/50 text-red-600 hover:bg-red-100 transition"
                     >
                       ✕
@@ -335,6 +337,7 @@ export default function FoodLibrary() {
                     </button>
                     <button
                       onClick={() => { setInventoryId(null); setInventoryAmount(''); setInventoryUnit('g') }}
+                      aria-label="Abbrechen"
                       className="rounded bg-gray-200 px-3 py-1 text-xs font-medium text-teal hover:bg-gray-300 transition"
                     >
                       ✕
@@ -425,6 +428,7 @@ export default function FoodLibrary() {
         >
           <button
             onClick={() => setZoomImg(null)}
+            aria-label="Schliessen"
             className="absolute top-4 right-4 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-black shadow"
           >
             ✕
