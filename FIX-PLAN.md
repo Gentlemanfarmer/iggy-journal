@@ -46,7 +46,7 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 
 ## Phase 3 — Datenmodell & Performance 🟠
 - [x] **3.1 DueOverview N+1** → ein Query über alle `(category, subtype)`, im Client gruppieren.
-- [ ] **3.2 Vorratsmodell / Einheiten:** gemischte g ↔ TL/EL pro Produkt verhindern oder kennzeichnen.
+- [x] **3.2 Vorratsmodell / Einheiten:** gemischte g ↔ TL/EL pro Produkt verhindern oder kennzeichnen.
 - [ ] **3.3 Init-Regeln** an Login/DB-Trigger hängen statt nur an RulesEditor-Mount.
 
 ## Phase 4 — Inhalt / Fachlich 🟠🟡  *(risikolos, jederzeit)*
