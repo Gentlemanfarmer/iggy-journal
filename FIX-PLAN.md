@@ -45,7 +45,7 @@ Ein Branch pro Punkt (`fix/rls-weightchart`, `fix/tz-helper`, …), klein commit
 - [x] **2.4 Toten Code entfernen:** ~~`useQueryCache.js`~~ (aktiv in JournalView) + `calculateDailyTotal` entfernt.
 
 ## Phase 3 — Datenmodell & Performance 🟠
-- [ ] **3.1 DueOverview N+1** → ein Query über alle `(category, subtype)`, im Client gruppieren.
+- [x] **3.1 DueOverview N+1** → ein Query über alle `(category, subtype)`, im Client gruppieren.
 - [ ] **3.2 Vorratsmodell / Einheiten:** gemischte g ↔ TL/EL pro Produkt verhindern oder kennzeichnen.
 - [ ] **3.3 Init-Regeln** an Login/DB-Trigger hängen statt nur an RulesEditor-Mount.
 
