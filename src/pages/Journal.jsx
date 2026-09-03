@@ -36,6 +36,7 @@ export default function Journal() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         setUser(session.user)
+        supabase.rpc('init_user_rules').catch(() => {})
       } else {
         navigate('/login')
       }

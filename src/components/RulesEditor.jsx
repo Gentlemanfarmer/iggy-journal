@@ -24,8 +24,6 @@ export default function RulesEditor() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) return
 
-      await supabase.rpc('init_user_rules')
-
       const { data, error } = await supabase
         .from('user_rules')
         .select('*')
