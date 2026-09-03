@@ -22,9 +22,12 @@ export default function KnowledgeBase() {
 
   const highlightText = (text, term) => {
     if (!term.trim()) return text
-    const regex = new RegExp(`(${term})`, 'gi')
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`(${escaped})`, 'gi')
     return text.split(regex).map((part, i) =>
-      regex.test(part) ? <mark key={i} className="bg-amber-200">{part}</mark> : part
+      part.toLowerCase() === term.toLowerCase()
+        ? <mark key={i} className="bg-amber-200">{part}</mark>
+        : part
     )
   }
 
