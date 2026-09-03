@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { categories } from '../lib/categories'
+import { todayLocal } from '../lib/dates'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { useIncidentTags } from '../hooks/useIncidentTags'
 import { getRule, getDependencies, buildDependentEntries } from '../lib/dependencies'
@@ -9,7 +10,7 @@ export default function QuickAdd({ onEntryAdded }) {
   const [step, setStep] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedSubtype, setSelectedSubtype] = useState(null)
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(todayLocal())
   const [note, setNote] = useState('')
   const [value, setValue] = useState('')
   const [file, setFile] = useState(null)
@@ -23,7 +24,7 @@ export default function QuickAdd({ onEntryAdded }) {
     setStep(0)
     setSelectedCategory(null)
     setSelectedSubtype(null)
-    setDate(new Date().toISOString().split('T')[0])
+    setDate(todayLocal())
     setNote('')
     setValue('')
     setFile(null)

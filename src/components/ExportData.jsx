@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { todayLocal } from '../lib/dates'
 
 export default function ExportData() {
   const [loading, setLoading] = useState(false)
@@ -39,7 +40,7 @@ export default function ExportData() {
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `iggy-journal-export-${new Date().toISOString().split('T')[0]}.csv`
+      link.download = `iggy-journal-export-${todayLocal()}.csv`
       link.click()
 
       setMessage('✅ Export erfolgreich: iggy-journal-export.csv')
@@ -81,7 +82,7 @@ export default function ExportData() {
       const blob = new Blob([json], { type: 'application/json;charset=utf-8;' })
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
-      link.download = `iggy-journal-export-${new Date().toISOString().split('T')[0]}.json`
+      link.download = `iggy-journal-export-${todayLocal()}.json`
       link.click()
 
       setMessage('✅ Export erfolgreich: iggy-journal-export.json')

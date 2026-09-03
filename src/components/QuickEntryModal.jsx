@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { todayLocal } from '../lib/dates'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
 import { useIncidentTags } from '../hooks/useIncidentTags'
 import { useRefresh } from '../context/RefreshContext'
@@ -53,7 +54,7 @@ export default function QuickEntryModal({ rule, isOpen, onClose, onSuccess }) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.user) throw new Error('Not authenticated')
 
-        const today = new Date().toISOString().split('T')[0]
+        const today = todayLocal()
         const photoUrl = await uploadFile(session.user.id)
 
         const { error: entryError } = await supabase

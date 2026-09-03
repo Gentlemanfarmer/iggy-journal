@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAsyncWithToast } from '../hooks/useAsyncWithToast'
-import { formatDateDE } from '../lib/dates'
+import { formatDateDE, todayLocal } from '../lib/dates'
 import { getProductRemaining, getProductDaysRemaining, getMealsPerDay, formatUnit } from '../lib/feeding'
 
 const UNITS = [
@@ -137,7 +137,7 @@ export default function FoodLibrary() {
           .update({
             stock_amount: parseFloat(inventoryAmount),
             stock_unit: inventoryUnit,
-            inventory_date: new Date().toISOString().split('T')[0],
+            inventory_date: todayLocal(),
             updated_at: new Date().toISOString(),
           })
           .eq('id', productId)
